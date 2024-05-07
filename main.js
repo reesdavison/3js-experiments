@@ -1,5 +1,6 @@
 import * as THREE from "three";
 
+// 3js setup + camera + light
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xdbdbcc);
 
@@ -23,7 +24,11 @@ scene.add(light);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 10);
 scene.add(directionalLight);
 
-function getSphere(
+camera.position.z = 5;
+
+// functions
+
+function createSphere(
   initPosition = [0, 0, 0],
   initVelocity = [0, 0, 0],
   mass = 1,
@@ -43,9 +48,6 @@ function getSphere(
   };
 }
 
-const sphere1 = getSphere([0, 0, 0], [0, 0, 0], 10 ** 11, 0xaf748d);
-const sphere2 = getSphere([2, 0, 0], [0, 1, 0], 100, 0x446df6);
-
 function getForce(obj1, obj2) {
   let u_ab0 = obj2.position[0] - obj1.position[0];
   let u_ab1 = obj2.position[1] - obj1.position[1];
@@ -61,19 +63,7 @@ function getForce(obj1, obj2) {
   return [force_mag * u_ab0, force_mag * u_ab1, force_mag * u_ab2];
 }
 
-function updatePosition(obj) {
-  obj.sphere.position.x = obj.position[0];
-  obj.sphere.position.y = obj.position[1];
-  obj.sphere.position.z = obj.position[2];
-}
-
-camera.position.z = 5;
-
-let time = 0;
-
-const radius = 2;
-
-function addArrow(newDir, newOrigin) {
+function createArrow(newDir, newOrigin) {
   const dir = new THREE.Vector3(...newDir);
   dir.normalize();
   const origin = new THREE.Vector3(...newOrigin);
@@ -84,32 +74,52 @@ function addArrow(newDir, newOrigin) {
   return arrowHelper;
 }
 
-const forceArrow = addArrow([0, 0, 0], [0, 0, 0]);
+function updatePosition(obj) {
+  obj.sphere.position.x = obj.position[0];
+  obj.sphere.position.y = obj.position[1];
+  obj.sphere.position.z = obj.position[2];
+}
+
+function updateForceArrow(forceArrowObj, force, position) {
+  forceArrowObj.position.x = position[0];
+  forceArrowObj.position.y = position[1];
+  forceArrowObj.position.z = position[2];
+  forceArrowObj.setDirection(new THREE.Vector3(...force).normalize());
+  forceArrowObj.setLength(
+    Math.sqrt(force[0] ** 2 + force[1] ** 2 + force[2] ** 2) * 0.005
+  );
+}
+
+function eulerStep(force, obj) {
+  const acc = force.map((force_comp) => force_comp / obj.mass);
+  const vel0 = obj.velocity[0] + TIME_STEP * acc[0];
+  const vel1 = obj.velocity[1] + TIME_STEP * acc[1];
+  const vel2 = obj.velocity[2] + TIME_STEP * acc[2];
+
+  const pos0 = obj.position[0] + TIME_STEP * vel0;
+  const pos1 = obj.position[1] + TIME_STEP * vel1;
+  const pos2 = obj.position[2] + TIME_STEP * vel2;
+
+  obj.position = [pos0, pos1, pos2];
+  obj.velocity = [vel0, vel1, vel2];
+}
+
+const sphere1 = createSphere([0, 0, 0], [0, 0, 0], 10 ** 11, 0xaf748d);
+const sphere2 = createSphere([2, 0, 0], [0, 1, 0], 100, 0x446df6);
+const forceArrow1 = createArrow([0, 0, 0], [0, 0, 0]);
+const forceArrow2 = createArrow([0, 0, 0], [0, 0, 0]);
 
 const TIME_STEP = 0.01;
+let time = 0;
 
 function animate() {
   requestAnimationFrame(animate);
 
-  sphere1.sphere.position.x = 0;
-  sphere1.sphere.position.y = 0;
-  sphere1.sphere.position.z = 0;
-
   const forceOnSphere1 = getForce(sphere1, sphere2);
   const forceOnSphere2 = getForce(sphere2, sphere1);
 
-  const acc = forceOnSphere2.map((force_comp) => force_comp / sphere2.mass);
-  const vel0 = sphere2.velocity[0] + TIME_STEP * acc[0];
-  const vel1 = sphere2.velocity[1] + TIME_STEP * acc[1];
-  const vel2 = sphere2.velocity[2] + TIME_STEP * acc[2];
-
-  const pos0 = sphere2.position[0] + TIME_STEP * vel0;
-  const pos1 = sphere2.position[1] + TIME_STEP * vel1;
-  const pos2 = sphere2.position[2] + TIME_STEP * vel2;
-
-  // update sphere object
-  sphere2.position = [pos0, pos1, pos2];
-  sphere2.velocity = [vel0, vel1, vel2];
+  eulerStep(forceOnSphere2, sphere2);
+  eulerStep(forceOnSphere1, sphere1);
 
   console.assert(
     forceOnSphere2[0] + forceOnSphere1[0] < 0.01 &&
@@ -118,16 +128,10 @@ function animate() {
     "Forces must be equal and opposite"
   );
 
-  forceArrow.position.x = sphere2.position[0];
-  forceArrow.position.y = sphere2.position[1];
-  forceArrow.position.z = sphere2.position[2];
-  forceArrow.setDirection(new THREE.Vector3(...forceOnSphere2).normalize());
-  forceArrow.setLength(
-    Math.sqrt(
-      forceOnSphere2[0] ** 2 + forceOnSphere2[1] ** 2 + forceOnSphere2[2] ** 2
-    ) * 0.01
-  );
+  updateForceArrow(forceArrow1, forceOnSphere2, sphere2.position);
+  updateForceArrow(forceArrow2, forceOnSphere1, sphere1.position);
 
+  updatePosition(sphere1);
   updatePosition(sphere2);
 
   renderer.render(scene, camera);
