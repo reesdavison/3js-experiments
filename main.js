@@ -91,8 +91,15 @@ function animate() {
   sphere2.position[1] = radius * Math.sin(time);
   sphere2.position[2] = Math.cos(time);
 
-  let forceOnSphere1 = getForce(sphere1, sphere2);
-  let forceOnSphere2 = getForce(sphere2, sphere1);
+  const forceOnSphere1 = getForce(sphere1, sphere2);
+  const forceOnSphere2 = getForce(sphere2, sphere1);
+
+  console.assert(
+    forceOnSphere2[0] + forceOnSphere1[0] < 0.01 &&
+      forceOnSphere2[1] + forceOnSphere1[1] < 0.01 &&
+      forceOnSphere2[2] + forceOnSphere1[2] < 0.01,
+    "Forces must be equal and opposite"
+  );
 
   forceArrow.position.x = sphere2.position[0];
   forceArrow.position.y = sphere2.position[1];
