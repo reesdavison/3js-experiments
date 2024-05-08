@@ -91,6 +91,12 @@ function updateForceArrow(forceArrowObj, force, position) {
 }
 
 function eulerStep(force, obj) {
+  // this is the semi-implicit euler method
+  // that's because we update position using
+  // a future velocity measurement
+
+  // if we were to use the old velocity, this
+  // would be explicit Euler integration
   const acc = force.map((force_comp) => force_comp / obj.mass);
   const vel0 = obj.velocity[0] + TIME_STEP * acc[0];
   const vel1 = obj.velocity[1] + TIME_STEP * acc[1];
@@ -104,10 +110,23 @@ function eulerStep(force, obj) {
   obj.velocity = [vel0, vel1, vel2];
 }
 
+function addForces(...forces) {
+  return forces.reduce(
+    (prev, force) => [
+      prev[0] + force[0],
+      prev[1] + force[1],
+      prev[2] + force[2],
+    ],
+    [0, 0, 0]
+  );
+}
+
 const sphere1 = createSphere([0, 0, 0], [0, 0, 0], 10 ** 11, 0xaf748d);
 const sphere2 = createSphere([2, 0, 0], [0, 1, 0], 100, 0x446df6);
+const sphere3 = createSphere([-2, 0, 0], [0, 1, 0], 100, 0x446df6);
 const forceArrow1 = createArrow([0, 0, 0], [0, 0, 0]);
 const forceArrow2 = createArrow([0, 0, 0], [0, 0, 0]);
+const forceArrow3 = createArrow([0, 0, 0], [0, 0, 0]);
 
 const TIME_STEP = 0.01;
 let time = 0;
@@ -115,24 +134,40 @@ let time = 0;
 function animate() {
   requestAnimationFrame(animate);
 
-  const forceOnSphere1 = getForce(sphere1, sphere2);
-  const forceOnSphere2 = getForce(sphere2, sphere1);
-
-  eulerStep(forceOnSphere2, sphere2);
-  eulerStep(forceOnSphere1, sphere1);
-
-  console.assert(
-    forceOnSphere2[0] + forceOnSphere1[0] < 0.01 &&
-      forceOnSphere2[1] + forceOnSphere1[1] < 0.01 &&
-      forceOnSphere2[2] + forceOnSphere1[2] < 0.01,
-    "Forces must be equal and opposite"
+  const forceOnSphere1 = addForces(
+    getForce(sphere1, sphere2),
+    getForce(sphere1, sphere3)
+  );
+  const forceOnSphere2 = addForces(
+    getForce(sphere2, sphere1),
+    getForce(sphere2, sphere3)
+  );
+  const forceOnSphere3 = addForces(
+    getForce(sphere3, sphere1),
+    getForce(sphere3, sphere2)
   );
 
-  updateForceArrow(forceArrow1, forceOnSphere2, sphere2.position);
+  // console.log("force", forceOnSphere1, forceOnSphere2, forceOnSphere3);
+
+  eulerStep(forceOnSphere1, sphere1);
+  eulerStep(forceOnSphere2, sphere2);
+  eulerStep(forceOnSphere3, sphere3);
+
+  // console.assert(
+  //   forceOnSphere2[0] + forceOnSphere1[0] < 0.01 &&
+  //     forceOnSphere2[1] + forceOnSphere1[1] < 0.01 &&
+  //     forceOnSphere2[2] + forceOnSphere1[2] < 0.01,
+  //   "Forces must be equal and opposite"
+  // );
+  // console.log("position", sphere1.position, sphere2.position, sphere3.position);
+
   updateForceArrow(forceArrow2, forceOnSphere1, sphere1.position);
+  updateForceArrow(forceArrow1, forceOnSphere2, sphere2.position);
+  updateForceArrow(forceArrow3, forceOnSphere3, sphere3.position);
 
   updatePosition(sphere1);
   updatePosition(sphere2);
+  updatePosition(sphere3);
 
   renderer.render(scene, camera);
   time += TIME_STEP;
