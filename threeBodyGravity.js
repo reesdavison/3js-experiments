@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 // 3js setup + camera + light
 const scene = new THREE.Scene();
@@ -18,6 +19,8 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+const controls = new OrbitControls(camera, renderer.domElement);
+
 const light = new THREE.AmbientLight(0x404040, 10); // soft white light
 scene.add(light);
 
@@ -26,17 +29,17 @@ scene.add(directionalLight);
 
 camera.position.z = 5;
 
-// functions
-
 function createSphere(
   initPosition = [0, 0, 0],
   initVelocity = [0, 0, 0],
   mass = 1,
-  color = 0xaf748d
+  color = 0xaf748d,
+  opacity = 1
 ) {
   const geometrySphere = new THREE.SphereGeometry(0.25);
   const materialSphere = new THREE.MeshPhongMaterial({
     color: color,
+    opacity: opacity,
   });
   const sphere = new THREE.Mesh(geometrySphere, materialSphere);
   scene.add(sphere);
@@ -121,9 +124,9 @@ function addForces(...forces) {
   );
 }
 
-const sphere1 = createSphere([0, 0, 0], [0, 0, 0], 10 ** 11, 0xaf748d);
-const sphere2 = createSphere([2, 0, 0], [0, 1, 0], 100, 0x446df6);
-const sphere3 = createSphere([-2, 0, 0], [0, 1, 0], 100, 0x446df6);
+const sphere1 = createSphere([0, 0, 0], [0, 0, 0], 10 ** 11, 0xaf748d, 0);
+const sphere2 = createSphere([2, 0, 0], [0, 1, 0], 10 ** 3, 0x446df6);
+const sphere3 = createSphere([-2, 0, 0], [0, -1, 0], 10 ** 3, 0x446df6);
 const forceArrow1 = createArrow([0, 0, 0], [0, 0, 0]);
 const forceArrow2 = createArrow([0, 0, 0], [0, 0, 0]);
 const forceArrow3 = createArrow([0, 0, 0], [0, 0, 0]);
@@ -147,19 +150,9 @@ function animate() {
     getForce(sphere3, sphere2)
   );
 
-  // console.log("force", forceOnSphere1, forceOnSphere2, forceOnSphere3);
-
   eulerStep(forceOnSphere1, sphere1);
   eulerStep(forceOnSphere2, sphere2);
   eulerStep(forceOnSphere3, sphere3);
-
-  // console.assert(
-  //   forceOnSphere2[0] + forceOnSphere1[0] < 0.01 &&
-  //     forceOnSphere2[1] + forceOnSphere1[1] < 0.01 &&
-  //     forceOnSphere2[2] + forceOnSphere1[2] < 0.01,
-  //   "Forces must be equal and opposite"
-  // );
-  // console.log("position", sphere1.position, sphere2.position, sphere3.position);
 
   updateForceArrow(forceArrow2, forceOnSphere1, sphere1.position);
   updateForceArrow(forceArrow1, forceOnSphere2, sphere2.position);
