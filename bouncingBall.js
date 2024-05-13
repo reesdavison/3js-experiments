@@ -36,30 +36,7 @@ scene.add(directionalLight);
 camera.position.z = 5;
 
 // functions
-
-function createSphere(
-  initPosition = [0, 0, 0],
-  initVelocity = [0, 0, 0],
-  mass = 1,
-  color = 0xaf748d,
-  radius = 0.25,
-  restitution = 1.0
-) {
-  const geometrySphere = new THREE.SphereGeometry(radius);
-  const materialSphere = new THREE.MeshPhongMaterial({
-    color: color,
-  });
-  const sphere = new THREE.Mesh(geometrySphere, materialSphere);
-  scene.add(sphere);
-  return {
-    sphere: sphere,
-    mass: mass,
-    position: initPosition,
-    velocity: initVelocity,
-    radius: radius,
-    restitution: restitution,
-  };
-}
+import { createSphere } from "./shared.js";
 
 function createGround(width = 1, height = 1, depth = 1, color = 0x0a0d4bff) {
   const geometry = new THREE.BoxGeometry(width, height, depth);
@@ -160,6 +137,7 @@ function addForces(...forces) {
 // simulate earth
 // we could use g=9.81 but we get to re-use our code this way
 const earth = createSphere(
+  scene,
   [0, -6335439, 0], // distance in metres between earths surface and centre
   [0, 0, 0],
   5.9722 * 10 ** 24, // mass in kg of earth,
@@ -167,6 +145,7 @@ const earth = createSphere(
   6335439
 );
 const sphere2 = createSphere(
+  scene,
   [0, 10, 0],
   [0, 2, 0],
   10 ** 3, // mass
