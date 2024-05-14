@@ -11,9 +11,6 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000
 );
-camera.position.y = 3;
-
-console.log(camera.position);
 
 // Gravitational constant
 const G = 6.674 * 10 ** -11;
@@ -30,41 +27,9 @@ scene.add(light);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 10);
 scene.add(directionalLight);
 
-// const helper = new THREE.DirectionalLightHelper(directionalLight, 5);
-// scene.add(helper);
-
 camera.position.z = 5;
 
-// functions
-import { createSphere } from "./src/js/shared.js";
-
-function createGround(width = 1, height = 1, depth = 1, color = 0x0a0d4bff) {
-  const geometry = new THREE.BoxGeometry(width, height, depth);
-  const material = new THREE.MeshPhongMaterial({
-    color: color,
-  });
-  const cube = new THREE.Mesh(geometry, material);
-  scene.add(cube);
-  cube.position.y = -height / 2;
-  return {
-    cube: cube,
-  };
-}
-
-function getForce(obj1, obj2) {
-  let u_ab0 = obj2.position[0] - obj1.position[0];
-  let u_ab1 = obj2.position[1] - obj1.position[1];
-  let u_ab2 = obj2.position[2] - obj2.position[2];
-  const r_squared = u_ab0 ** 2 + u_ab1 ** 2 + u_ab2 ** 2;
-  const u_norm = Math.sqrt(r_squared);
-  u_ab0 = u_ab0 / u_norm;
-  u_ab1 = u_ab1 / u_norm;
-  u_ab2 = u_ab2 / u_norm;
-
-  const force_mag = (G * obj1.mass * obj2.mass) / r_squared;
-
-  return [force_mag * u_ab0, force_mag * u_ab1, force_mag * u_ab2];
-}
+import { createSphere, gjkIntersectionSpheres } from "./src/js/shared.js";
 
 function createArrow(newDir, newOrigin) {
   const dir = new THREE.Vector3(...newDir);
@@ -93,7 +58,7 @@ function updateForceArrow(forceArrowObj, force, position) {
   );
 }
 
-function eulerStep(force, obj, useGroundConstraint = false) {
+function eulerStep(force, obj) {
   // this is the semi-implicit euler method
   // that's because we update position using
   // a future velocity measurement
@@ -109,53 +74,29 @@ function eulerStep(force, obj, useGroundConstraint = false) {
   const pos1 = obj.position[1] + TIME_STEP * vel1;
   const pos2 = obj.position[2] + TIME_STEP * vel2;
 
-  if (useGroundConstraint && pos1 - obj.radius <= 0) {
-    // obj.position = [0, 0, 0];
-    obj.velocity = [
-      -vel0 * obj.restitution,
-      -vel1 * obj.restitution,
-      -vel2 * obj.restitution,
-    ];
-    return;
-  }
-
   obj.position = [pos0, pos1, pos2];
   obj.velocity = [vel0, vel1, vel2];
 }
 
-function addForces(...forces) {
-  return forces.reduce(
-    (prev, force) => [
-      prev[0] + force[0],
-      prev[1] + force[1],
-      prev[2] + force[2],
-    ],
-    [0, 0, 0]
-  );
-}
-
-// simulate earth
-// we could use g=9.81 but we get to re-use our code this way
-const earth = createSphere(
+const sphere1 = createSphere(
   scene,
-  [0, -6335439, 0], // distance in metres between earths surface and centre
-  [0, 0, 0],
-  5.9722 * 10 ** 24, // mass in kg of earth,
-  0x47673b,
-  6335439
+  [2, 0.5, 0],
+  [-1, 0, 0],
+  10 ** 3, // mass
+  0x446df6,
+  0.75,
+  0.8
 );
 const sphere2 = createSphere(
   scene,
-  [0, 10, 0],
-  [0, 2, 0],
+  //[-2, -0.5, 0],
+  [2, 0.25, 0],
+  [1, 0, 0],
   10 ** 3, // mass
   0x446df6,
-  0.25,
+  0.75,
   0.8
 );
-// const forceArrow1 = createArrow([0, 0, 0], [0, 0, 0]);
-// const forceArrow2 = createArrow([0, 0, 0], [0, 0, 0]);
-// const ground = createGround(6, 0.5, 6);
 
 const TIME_STEP = 0.01;
 let time = 0;
@@ -163,20 +104,30 @@ let time = 0;
 function animate() {
   requestAnimationFrame(animate);
 
-  const forceOnEarth = addForces(getForce(earth, sphere2));
+  // const forceOnSphere1 = addForces(
+  //   getForce(sphere1, sphere2),
+  //   getForce(sphere1, sphere3)
+  // );
+  // const forceOnSphere2 = addForces(
+  //   getForce(sphere2, sphere1),
+  //   getForce(sphere2, sphere3)
+  // );
+  // const forceOnSphere3 = addForces(
+  //   getForce(sphere3, sphere1),
+  //   getForce(sphere3, sphere2)
+  // );
+  const collide = gjkIntersectionSpheres(sphere1, sphere2);
+  console.log("Collide ", collide);
 
-  const forceOfGravity = getForce(sphere2, earth);
-  const forceOnSphere2 = addForces(forceOfGravity);
+  eulerStep([0, 0, 0], sphere1);
+  eulerStep([0, 0, 0], sphere2);
 
-  console.log(sphere2);
-
-  eulerStep(forceOnEarth, earth);
-  eulerStep(forceOnSphere2, sphere2, true);
-
-  // updateForceArrow(forceArrow2, forceOnEarth, earth.position);
   // updateForceArrow(forceArrow1, forceOnSphere2, sphere2.position);
+  // updateForceArrow(forceArrow2, forceOnSphere1, sphere1.position);
+  // updateForceArrow(forceArrow3, forceOnSphere3, sphere3.position);
 
-  updatePosition(earth);
+  // updatePosition(sphere1);
+  updatePosition(sphere1);
   updatePosition(sphere2);
 
   renderer.render(scene, camera);
