@@ -89,8 +89,8 @@ const sphere1 = createSphere(
 );
 const sphere2 = createSphere(
   scene,
-  //[-2, -0.5, 0],
-  [2, 0.25, 0],
+  [-2, -0.5, 0],
+  // [2, 0.25, 0],
   [1, 0, 0],
   10 ** 3, // mass
   0x446df6,
@@ -104,27 +104,11 @@ let time = 0;
 function animate() {
   requestAnimationFrame(animate);
 
-  // const forceOnSphere1 = addForces(
-  //   getForce(sphere1, sphere2),
-  //   getForce(sphere1, sphere3)
-  // );
-  // const forceOnSphere2 = addForces(
-  //   getForce(sphere2, sphere1),
-  //   getForce(sphere2, sphere3)
-  // );
-  // const forceOnSphere3 = addForces(
-  //   getForce(sphere3, sphere1),
-  //   getForce(sphere3, sphere2)
-  // );
   const collide = gjkIntersectionSpheres(sphere1, sphere2);
   console.log("Collide ", collide);
 
   eulerStep([0, 0, 0], sphere1);
   eulerStep([0, 0, 0], sphere2);
-
-  // updateForceArrow(forceArrow1, forceOnSphere2, sphere2.position);
-  // updateForceArrow(forceArrow2, forceOnSphere1, sphere1.position);
-  // updateForceArrow(forceArrow3, forceOnSphere3, sphere3.position);
 
   // updatePosition(sphere1);
   updatePosition(sphere1);

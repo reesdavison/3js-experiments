@@ -164,7 +164,24 @@ export function directionToOrigin(simplex) {
     multiplyConst(norm12, projectionOnLine)
   );
   const direction = subtractVectors(origin, closestPointOnLine);
-  return direction;
+  return normaliseVec(direction);
+}
+
+export function normalToOrigin(simplex) {
+  if (simplex.size != 3) {
+    throw new Error("Expected simplex to be a plane.");
+  }
+  const iter = simplex.keys();
+  const vec1 = stringToVec(iter.next().value);
+  const vec2 = stringToVec(iter.next().value);
+  const vec3 = stringToVec(iter.next().value);
+
+  const a = subtractVectors(vec2, vec1);
+  const b = subtractVectors(vec3, vec1);
+  const normal = crossProduct(a, b);
+  const direction =
+    dotProduct(normal, vec1) < 0 ? normal : invertVector(normal);
+  return normaliseVec(direction);
 }
 
 export function nearestSimplex(simplex) {
@@ -189,16 +206,7 @@ export function nearestSimplex(simplex) {
     } else {
       containsOrigin = false;
     }
-    const iter = simplex.keys();
-    const vec1 = stringToVec(iter.next().value);
-    const vec2 = stringToVec(iter.next().value);
-    const vec3 = stringToVec(iter.next().value);
-
-    const a = subtractVectors(vec2, vec1);
-    const b = subtractVectors(vec3, vec1);
-    const normal = crossProduct(a, b);
-    nextDirection =
-      dotProduct(normal, vec1) > 0 ? normal : invertVector(normal);
+    nextDirection = normalToOrigin(simplex);
   } else {
     throw new Error(
       `simplex musty be of size 2, 3 or 4 but has size ${
@@ -223,7 +231,8 @@ export function gjkIntersectionSpheres(obj1, obj2, initDirection = [1, 0, 0]) {
   let nextDirection = subtractVectors([0, 0, 0], A);
   let containsOrigin = false;
 
-  while (true) {
+  let count = 0;
+  while (count < 10) {
     A = subtractVectors(
       supportSphere(obj1, nextDirection),
       supportSphere(obj2, invertVector(nextDirection))
@@ -235,12 +244,8 @@ export function gjkIntersectionSpheres(obj1, obj2, initDirection = [1, 0, 0]) {
     simplex.add(vecToString(A));
     ({ nextDirection, containsOrigin } = nearestSimplex(simplex));
     if (containsOrigin) return true;
-  }
-}
 
-// module.exports = {
-//   createSphere,
-//   directionToOrigin,
-//   gjkIntersectionSpheres,
-//   vecToString,
-// };
+    count++;
+  }
+  return false;
+}

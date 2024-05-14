@@ -3,6 +3,7 @@ import {
   vecToString,
   supportSphere,
   pointInTetrahedron,
+  normalToOrigin,
 } from "../src/js/shared";
 
 import { describe, expect, it } from "vitest";
@@ -13,8 +14,10 @@ describe("direction to origin", () => {
     const vec2 = [0, 1, 0];
     const simplex = new Set([vecToString(vec1), vecToString(vec2)]);
     const vec3 = directionToOrigin(simplex);
-    expect(vec3[0]).toBeCloseTo(-0.5);
-    expect(vec3[1]).toBeCloseTo(-0.5);
+
+    const norm = Math.sqrt(0.5 ** 2 + 0.5 ** 2);
+    expect(vec3[0]).toBeCloseTo(-0.5 / norm);
+    expect(vec3[1]).toBeCloseTo(-0.5 / norm);
     expect(vec3[2]).toBeCloseTo(0);
   });
 
@@ -23,8 +26,9 @@ describe("direction to origin", () => {
     const vec2 = [-1, 2, 0];
     const simplex = new Set([vecToString(vec1), vecToString(vec2)]);
     const vec3 = directionToOrigin(simplex);
-    expect(vec3[0]).toBeCloseTo(-0.5);
-    expect(vec3[1]).toBeCloseTo(-0.5);
+    const norm = Math.sqrt(0.5 ** 2 + 0.5 ** 2);
+    expect(vec3[0]).toBeCloseTo(-0.5 / norm);
+    expect(vec3[1]).toBeCloseTo(-0.5 / norm);
     expect(vec3[2]).toBeCloseTo(0);
   });
 });
@@ -93,5 +97,24 @@ describe("point inside tetrahedron", () => {
     const p1 = [-1, -1, -1];
     const inside = pointInTetrahedron(vec1, vec2, vec3, vec4, p1);
     expect(inside).toBeFalsy();
+  });
+});
+
+describe("normal towards origin of plane", () => {
+  it("returns true for simple case", () => {
+    const vec1 = [10, 0, 0];
+    const vec2 = [0, 10, 0];
+    const vec3 = [0, 0, 10];
+
+    const simplex = new Set([
+      vecToString(vec1),
+      vecToString(vec2),
+      vecToString(vec3),
+    ]);
+    const direction = normalToOrigin(simplex);
+    const norm = Math.sqrt(3);
+    expect(direction[0]).toBeCloseTo(-1 / norm);
+    expect(direction[1]).toBeCloseTo(-1 / norm);
+    expect(direction[2]).toBeCloseTo(-1 / norm);
   });
 });
