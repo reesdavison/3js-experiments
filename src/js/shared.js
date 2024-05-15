@@ -217,7 +217,7 @@ export function nearestSimplex(simplex) {
 
   return {
     simplex,
-    nextDirection,
+    nextDirection: normaliseVec(nextDirection),
     containsOrigin,
   };
 }
@@ -232,20 +232,106 @@ export function gjkIntersectionSpheres(obj1, obj2, initDirection = [1, 0, 0]) {
   let containsOrigin = false;
 
   let count = 0;
-  while (count < 10) {
+  while (count < 20) {
     A = subtractVectors(
       supportSphere(obj1, nextDirection),
       supportSphere(obj2, invertVector(nextDirection))
     );
 
     if (dotProduct(A, nextDirection) < 0) {
-      return false;
+      return { collide: false };
     }
     simplex.add(vecToString(A));
     ({ nextDirection, containsOrigin } = nearestSimplex(simplex));
-    if (containsOrigin) return true;
+    if (containsOrigin)
+      return {
+        collide: true,
+        normal: nextDirection,
+        obj1Closest: supportSphere(obj1, nextDirection),
+        obj2Closest: supportSphere(obj2, invertVector(nextDirection)),
+      };
 
     count++;
   }
-  return false;
+  return { collide: false };
+}
+
+export function resolvePosition(collision, obj1, obj2) {
+  /*
+  We resolve using inverse mass weighting
+  where d = d1+d2 where d is the distance between the closest 
+  points ob the objects.
+
+  d1 = d * (1/m1) / ((1/m1) + (1/m2))
+     = d * m2 / (m1+m2)
+
+  Need to take care of m1, m2 labels
+  */
+  const { normal, obj1Closest, obj2Closest } = collision;
+  const d = magnitude(subtractVectors(obj1Closest, obj2Closest));
+  const totalMass = obj1.mass + obj2.mass;
+  const obj1Frac = obj2.mass / totalMass;
+  const obj2Frac = obj1.mass / totalMass;
+  const d1 = d * obj1Frac;
+  const d2 = d * obj2Frac;
+
+  obj1.position = subtractVectors(obj1.position, multiplyConst(normal, d1));
+  obj2.position = addVectors(obj2.position, multiplyConst(normal, d2));
+}
+
+export function resolveVelocity(collision, obj1, obj2) {
+  /*
+    if we ignore rotation in the current equations
+
+    . means dot product
+    v* means vector
+
+    m1*v1_after = m1*v1_before + impulse * v_collision_norm
+    m2*v2_after = m2*v2_before - impulse * v_collision_norm
+
+    coefficient of restitution (Cr): is a property of materials
+    Cr =  - (v1_after - v2_after) . v_collision_norm
+         -------------------------------------------
+         (v1_before - v2_before) . v_collision_norm
+
+    solving these equations for impulse, and plugging in 
+    v1_after, v2_after into the Cr equation
+
+    we also need to use the dot product identity
+
+    v_a.v_b = |v_a||v_b|cos(theta)
+    v_collision_norm . v_collision_norm == 1 
+    
+    since magnitude is 1 and angle between is 0deg. 
+    gives us
+
+    impulse = 1/((1/m1) + (1/m2)) * -(Cr + 1) (v1_before - v2_before).v_collision_norm
+
+    1/((1/m1) + (1/m2)) == m1m2 / m1 + m2
+    */
+  const { normal } = collision;
+  const mass_term = (obj1.mass * obj2.mass) / (obj1.mass + obj2.mass);
+  const Cr = 1; // (for now)
+  const impulse = -Math.abs(
+    mass_term *
+      -(Cr + 1) *
+      dotProduct(subtractVectors(obj1.velocity, obj2.velocity), normal)
+  );
+
+  const v1_diff = multiplyConst(normal, impulse / obj1.mass);
+  const v1_after = addVectors(obj1.velocity, v1_diff);
+  const v2_diff = multiplyConst(normal, impulse / obj2.mass);
+  const v2_after = subtractVectors(obj2.velocity, v2_diff);
+
+  obj1.velocity = v1_after;
+  obj2.velocity = v2_after;
+}
+
+export function resolveCollision(collision, obj1, obj2) {
+  const { collide, normal, obj1Closest, obj2Closest } = collision;
+  if (collide) {
+    // first resolve positions, and update objects
+    resolvePosition(collision, obj1, obj2);
+    resolveVelocity(collision, obj1, obj2);
+  }
 }

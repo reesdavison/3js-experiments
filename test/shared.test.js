@@ -4,6 +4,10 @@ import {
   supportSphere,
   pointInTetrahedron,
   normalToOrigin,
+  invertVector,
+  resolvePosition,
+  normaliseVec,
+  resolveVelocity,
 } from "../src/js/shared";
 
 import { describe, expect, it } from "vitest";
@@ -116,5 +120,119 @@ describe("normal towards origin of plane", () => {
     expect(direction[0]).toBeCloseTo(-1 / norm);
     expect(direction[1]).toBeCloseTo(-1 / norm);
     expect(direction[2]).toBeCloseTo(-1 / norm);
+  });
+});
+
+describe("resolve position", () => {
+  it("works with objects travelling along same dimension", () => {
+    const normal = [1, 0, 0];
+    const obj1 = {
+      mass: 1,
+      position: [0, 0, 0],
+      radius: 1,
+    };
+    const obj2 = {
+      mass: 1,
+      position: [1.5, 0, 0],
+      radius: 1,
+    };
+    const collision = {
+      collide: true,
+      normal: [1, 0, 0],
+      obj1Closest: supportSphere(obj1, normal),
+      obj2Closest: supportSphere(obj2, invertVector(normal)),
+    };
+    expect(collision.obj1Closest).toStrictEqual([1, 0, 0]);
+    expect(collision.obj2Closest).toStrictEqual([0.5, 0, 0]);
+    resolvePosition(collision, obj1, obj2);
+    expect(obj1.position).toStrictEqual([-0.25, 0, 0]); // -> 0.25 left
+    expect(obj2.position).toStrictEqual([1.75, 0, 0]); // <- 0.25 right
+  });
+
+  it("works with objects along y=x", () => {
+    const normal = normaliseVec([1, 1, 0]);
+    const obj1 = {
+      mass: 1,
+      position: [0, 0, 0],
+      radius: 1,
+    };
+    const obj2 = {
+      mass: 1,
+      position: [1, 1, 0],
+      radius: 1,
+    };
+    const collision = {
+      collide: true,
+      normal: normal,
+      obj1Closest: supportSphere(obj1, normal),
+      obj2Closest: supportSphere(obj2, invertVector(normal)),
+    };
+    const val = Math.sqrt(0.5);
+    expect(collision.obj1Closest).toStrictEqual([val, val, 0]);
+    expect(collision.obj2Closest).toStrictEqual([1 - val, 1 - val, 0]);
+    resolvePosition(collision, obj1, obj2);
+    expect(obj1.position[0]).toStrictEqual(obj1.position[1]);
+    expect(obj1.position[0]).toBeCloseTo(-0.20710678);
+    expect(obj2.position[0]).toStrictEqual(obj2.position[1]);
+    expect(obj2.position[0]).toBeCloseTo(1.20710678);
+  });
+});
+
+describe("resolve velocity", () => {
+  it("works with objects travelling along same dimension", () => {
+    const normal = [1, 0, 0];
+    const obj1 = {
+      mass: 1,
+      position: [0, 0, 0],
+      velocity: [1, 0, 0],
+      radius: 1,
+    };
+    const obj2 = {
+      mass: 1,
+      position: [1.5, 0, 0],
+      velocity: [-1, 0, 0],
+      radius: 1,
+    };
+    const collision = {
+      collide: true,
+      normal: [1, 0, 0],
+      obj1Closest: supportSphere(obj1, normal),
+      obj2Closest: supportSphere(obj2, invertVector(normal)),
+    };
+    expect(collision.obj1Closest).toStrictEqual([1, 0, 0]);
+    expect(collision.obj2Closest).toStrictEqual([0.5, 0, 0]);
+    resolveVelocity(collision, obj1, obj2);
+    expect(obj1.velocity).toStrictEqual([-1, 0, 0]);
+    expect(obj2.velocity).toStrictEqual([1, 0, 0]);
+  });
+
+  it("works with objects along y=x", () => {
+    const normal = normaliseVec([1, 1, 0]);
+    const obj1 = {
+      mass: 1,
+      position: [0, 0, 0],
+      velocity: [1, 1, 0],
+      radius: 1,
+    };
+    const obj2 = {
+      mass: 1,
+      position: [1, 1, 0],
+      velocity: [-1, -1, 0],
+      radius: 1,
+    };
+    const collision = {
+      collide: true,
+      normal: normal,
+      obj1Closest: supportSphere(obj1, normal),
+      obj2Closest: supportSphere(obj2, invertVector(normal)),
+    };
+    const val = Math.sqrt(0.5);
+    expect(collision.obj1Closest).toStrictEqual([val, val, 0]);
+    expect(collision.obj2Closest).toStrictEqual([1 - val, 1 - val, 0]);
+    resolveVelocity(collision, obj1, obj2);
+    expect(obj1.velocity[0]).toStrictEqual(obj1.velocity[1]);
+    expect(obj1.velocity[0]).toBeCloseTo(-1);
+    expect(obj2.velocity[0]).toStrictEqual(obj2.velocity[1]);
+    expect(obj2.velocity[0]).toBeCloseTo(1);
   });
 });

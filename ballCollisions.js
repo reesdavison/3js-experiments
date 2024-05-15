@@ -29,7 +29,11 @@ scene.add(directionalLight);
 
 camera.position.z = 5;
 
-import { createSphere, gjkIntersectionSpheres } from "./src/js/shared.js";
+import {
+  createSphere,
+  gjkIntersectionSpheres,
+  resolveCollision,
+} from "./src/js/shared.js";
 
 function createArrow(newDir, newOrigin) {
   const dir = new THREE.Vector3(...newDir);
@@ -46,16 +50,6 @@ function updatePosition(obj) {
   obj.sphere.position.x = obj.position[0];
   obj.sphere.position.y = obj.position[1];
   obj.sphere.position.z = obj.position[2];
-}
-
-function updateForceArrow(forceArrowObj, force, position) {
-  forceArrowObj.position.x = position[0];
-  forceArrowObj.position.y = position[1];
-  forceArrowObj.position.z = position[2];
-  forceArrowObj.setDirection(new THREE.Vector3(...force).normalize());
-  forceArrowObj.setLength(
-    Math.sqrt(force[0] ** 2 + force[1] ** 2 + force[2] ** 2) * 0.005
-  );
 }
 
 function eulerStep(force, obj) {
@@ -98,19 +92,33 @@ const sphere2 = createSphere(
   0.8
 );
 
+const normalArrow = createArrow([90, 90, 90], [90, 90, 90]);
+
+function updateArrow(arrowObj, direction, position) {
+  arrowObj.position.x = position[0];
+  arrowObj.position.y = position[1];
+  arrowObj.position.z = position[2];
+  arrowObj.setDirection(new THREE.Vector3(...direction).normalize());
+  arrowObj.setLength(2);
+}
+
 const TIME_STEP = 0.01;
 let time = 0;
 
 function animate() {
   requestAnimationFrame(animate);
 
-  const collide = gjkIntersectionSpheres(sphere1, sphere2);
-  console.log("Collide ", collide);
+  const collision = gjkIntersectionSpheres(sphere1, sphere2);
+  const { collide, normal: collideNormal } = collision;
+
+  if (collide) {
+    updateArrow(normalArrow, collideNormal, sphere1.position);
+    resolveCollision(collision, sphere1, sphere2);
+  }
 
   eulerStep([0, 0, 0], sphere1);
   eulerStep([0, 0, 0], sphere2);
 
-  // updatePosition(sphere1);
   updatePosition(sphere1);
   updatePosition(sphere2);
 
