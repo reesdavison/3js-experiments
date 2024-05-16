@@ -77,15 +77,15 @@ function eulerStep(force, obj) {
 
 createHelperGrid(scene);
 
-// const bottomPlane = createPlane(scene, 10, 10);
-// bottomPlane.plane.position.x = 0;
-// bottomPlane.plane.position.y = 0;
-// bottomPlane.plane.position.z = 0;
-// // createArrow([1, 0, 0], [0, 0, 0]);
-// bottomPlane.plane.setRotationFromAxisAngle(
-//   new THREE.Vector3(1, 0, 0),
-//   Math.PI / 2
-// );
+const bottomPlane = createPlane(
+  scene,
+  10,
+  10,
+  [0, 0, 0],
+  [1, 0, 0],
+  Math.PI / 2
+);
+console.log(bottomPlane);
 
 // const backPlane = createPlane(scene, 8, 5);
 // backPlane.plane.rotateY(90);
@@ -95,7 +95,7 @@ createHelperGrid(scene);
 
 const sphere1 = createSphere(
   scene,
-  [-2, 0.1, 0],
+  [-2, 1.5, 0],
   // [2, 0.25, 0],
   [2, 0, 0],
   10 ** 3, // mass
@@ -105,7 +105,7 @@ const sphere1 = createSphere(
 );
 const sphere2 = createSphere(
   scene,
-  [2, 0.3, 0],
+  [2, 1.2, 0],
   [-2, 0, 0],
   10 ** 3, // mass
   0x446df6,

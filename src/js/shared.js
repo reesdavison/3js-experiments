@@ -21,7 +21,14 @@ export function createBox(
   };
 }
 
-export function createPlane(scene, width = 1, height = 1) {
+export function createPlane(
+  scene,
+  width = 1,
+  height = 1,
+  position = [0, 0, 0],
+  rotationAxis = [1, 0, 0],
+  rotationRadians = 0
+) {
   const geometry = new THREE.PlaneGeometry(width, height);
   const material = new THREE.MeshBasicMaterial({
     color: 0xb7c9bc,
@@ -29,8 +36,25 @@ export function createPlane(scene, width = 1, height = 1) {
   });
   const plane = new THREE.Mesh(geometry, material);
   scene.add(plane);
+  plane.setRotationFromAxisAngle(
+    new THREE.Vector3(...rotationAxis),
+    rotationRadians
+  );
+  plane.position.x = 0;
+  plane.position.y = 0;
+  plane.position.z = 0;
+
+  // tl, tr, br, bl
+  const tl = new THREE.Vector3(-width / 2, height / 2, 0);
+  const tr = new THREE.Vector3(width / 2, height / 2, 0);
+  const br = new THREE.Vector3(width / 2, -height / 2, 0);
+  const bl = new THREE.Vector3(-width / 2, -height / 2, 0);
+
+  tl.applyAxisAngle();
+
   return {
     plane,
+    normal: plane.normal,
   };
 }
 
@@ -63,6 +87,7 @@ export function createSphere(
     velocity: initVelocity,
     radius: radius,
     restitution: restitution,
+    support: supportSphere,
   };
 }
 
@@ -108,6 +133,45 @@ export function supportSphere(sphere, direction) {
     sphere.position[1] + sphere.radius * normDirection[1],
     sphere.position[2] + sphere.radius * normDirection[2],
   ];
+}
+
+export function supportCuboid(cuboid, direction) {
+  const normDirection = normaliseVec(direction);
+  const dotProducts = cuboid.corners.map((point) =>
+    dotProduct(point, normDirection)
+  );
+
+  const planeCorners = cuboid.corners.filter(
+    (point, index) => dotProducts[index] > 0
+  );
+
+  const a = planeCorners[0];
+  const b = planeCorners[1];
+  const c = planeCorners[2];
+  const d = planeCorners[3];
+
+  const ab = subtractVectors(b, a);
+  const ac = subtractVectors(c, a);
+
+  // this assumes ab and ac are perpendicular
+  if (
+    Math.abs(Math.acos(dotProduct(ab, ac) / (magnitude(ab) * magnitude(ac)))) >
+    5
+  ) {
+    console.log("ERROR lines not perpendicular");
+  }
+
+  const abc = normaliseVec(crossProduct(ab, ac));
+
+  const origin = [0, 0, 0];
+  const valD =
+    dotProduct(subtractVectors(a, origin), abc) /
+    dotProduct(normDirection, abc);
+  const pointOfCollision = addVectors(
+    origin,
+    multiplyConst(normDirection, valD)
+  );
+  return pointOfCollision;
 }
 
 export function vecToString(vec) {

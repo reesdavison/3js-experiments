@@ -8,6 +8,7 @@ import {
   resolvePosition,
   normaliseVec,
   resolveVelocity,
+  supportCuboid,
 } from "../src/js/shared";
 
 import { describe, expect, it } from "vitest";
@@ -291,5 +292,44 @@ describe("resolve velocity", () => {
     resolveVelocity(collision, obj1, obj2);
     expectVectorClose(obj1.velocity, [0.96039, 0, 0]);
     expectVectorClose(obj2.velocity, [2.96039, 0, 0]);
+  });
+});
+
+describe("support cuboid works as expected", () => {
+  const unitCube = {
+    corners: [
+      [1, 1, 1],
+      [-1, 1, 1],
+      [1, -1, 1],
+      [1, 1, -1],
+      [-1, -1, 1],
+      [1, -1, -1],
+      [-1, 1, -1],
+      [-1, -1, -1],
+    ],
+  };
+
+  it("works for right direction unit sphere", () => {
+    const direction = [1, 0, 0];
+    const intersect = supportCuboid(unitCube, direction);
+    expectVectorClose(intersect, [1, 0, 0]);
+  });
+
+  it("works for left direction unit sphere", () => {
+    const direction = [-1, 0, 0];
+    const intersect = supportCuboid(unitCube, direction);
+    expectVectorClose(intersect, [-1, 0, 0]);
+  });
+
+  it("works for an angle", () => {
+    const direction = [1, 0.5, 0];
+    const intersect = supportCuboid(unitCube, direction);
+    expectVectorClose(intersect, [1, 0.5, 0]);
+  });
+
+  it("works for an angle opposite", () => {
+    const direction = [-1, -0.5, 0];
+    const intersect = supportCuboid(unitCube, direction);
+    expectVectorClose(intersect, [-1, -0.5, 0]);
   });
 });
