@@ -30,7 +30,10 @@ scene.add(directionalLight);
 camera.position.z = 5;
 
 import {
+  createBox,
+  createPlane,
   createSphere,
+  createHelperGrid,
   gjkIntersectionSpheres,
   resolveCollision,
 } from "./src/js/shared.js";
@@ -72,40 +75,41 @@ function eulerStep(force, obj) {
   obj.velocity = [vel0, vel1, vel2];
 }
 
-// const sphere1 = createSphere(
-//   scene,
-//   [-2, -0.25, 0],
-//   [1, 0, 0],
-//   10 ** 3, // mass
-//   0x446df6,
-//   0.75,
-//   0.8
+createHelperGrid(scene);
+
+// const bottomPlane = createPlane(scene, 10, 10);
+// bottomPlane.plane.position.x = 0;
+// bottomPlane.plane.position.y = 0;
+// bottomPlane.plane.position.z = 0;
+// // createArrow([1, 0, 0], [0, 0, 0]);
+// bottomPlane.plane.setRotationFromAxisAngle(
+//   new THREE.Vector3(1, 0, 0),
+//   Math.PI / 2
 // );
-// const sphere2 = createSphere(
-//   scene,
-//   [2, 0.25, 0],
-//   [-1, 0, 0],
-//   10 ** 3, // mass
-//   0x446df6,
-//   0.75,
-//   0.8
-// );
+
+// const backPlane = createPlane(scene, 8, 5);
+// backPlane.plane.rotateY(90);
+// backPlane.plane.position.x = 0;
+// backPlane.plane.position.y = 1;
+// backPlane.plane.position.z = 0;
+
 const sphere1 = createSphere(
   scene,
-  [-2, -2, 0],
-  [1, 1, 0],
+  [-2, 0.1, 0],
+  // [2, 0.25, 0],
+  [2, 0, 0],
   10 ** 3, // mass
   0x446df6,
-  0.75,
+  0.4,
   0.8
 );
 const sphere2 = createSphere(
   scene,
-  [2, -2, 0],
-  [-1, 1, 0],
+  [2, 0.3, 0],
+  [-2, 0, 0],
   10 ** 3, // mass
   0x446df6,
-  0.75,
+  0.4,
   0.8
 );
 

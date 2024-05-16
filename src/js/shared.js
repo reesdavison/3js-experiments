@@ -1,4 +1,45 @@
 import * as THREE from "three";
+import { cross, mul, sub } from "three/examples/jsm/nodes/Nodes.js";
+
+export function createBox(
+  scene,
+  width = 1,
+  height = 1,
+  depth = 1,
+  color = 0x0a0d4bff
+) {
+  const geometry = new THREE.BoxGeometry(width, height, depth);
+  const material = new THREE.MeshPhongMaterial({
+    color: color,
+    wireframe: true,
+  });
+  const cube = new THREE.Mesh(geometry, material);
+  scene.add(cube);
+  cube.position.y = -height / 2;
+  return {
+    cube: cube,
+  };
+}
+
+export function createPlane(scene, width = 1, height = 1) {
+  const geometry = new THREE.PlaneGeometry(width, height);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0xb7c9bc,
+    side: THREE.DoubleSide,
+  });
+  const plane = new THREE.Mesh(geometry, material);
+  scene.add(plane);
+  return {
+    plane,
+  };
+}
+
+export function createHelperGrid(scene) {
+  const size = 10;
+  const divisions = 10;
+  const gridHelper = new THREE.GridHelper(size, divisions);
+  scene.add(gridHelper);
+}
 
 export function createSphere(
   scene,
@@ -117,6 +158,12 @@ export function pointInTetrahedron(v1, v2, v3, v4, p) {
   );
 }
 
+export function sameSideLine(v1, v2, p) {
+  return (p[0] - v2[0]) * (v1[1] - v2[1]) - (v1[0] - v2[0]) * (v0[1] - v2[1]);
+}
+
+export function pointInTriangle(v1, v2, v3, p) {}
+
 export function squaredDistanceFromOrigin(vec) {
   return vec[0] ** 2 + vec[1] ** 2 + vec[2] ** 2;
 }
@@ -134,18 +181,36 @@ export function multiplyConst(vec, constant) {
   return [vec[0] * constant, vec[1] * constant, vec[2] * constant];
 }
 
-export function eliminateFurthestPoint(simplex) {
-  let largestDist = -1;
-  let eliminateKey = undefined;
-  Array.from(simplex).forEach((key) => {
-    const vec = stringToVec(key);
-    const sqd = squaredDistanceFromOrigin(vec);
-    if (sqd > largestDist) {
-      largestDist = sqd;
-      eliminateKey = key;
-    }
-  });
-  simplex.delete(eliminateKey);
+// export function eliminateFurthestPoint(simplex) {
+//   let largestDist = -1;
+//   let eliminateKey = undefined;
+//   let eliminateVec = undefined;
+//   simplex.forEach((vec) => {
+//     const sqd = squaredDistanceFromOrigin(vec);
+//     if (sqd > largestDist) {
+//       largestDist = sqd;
+//       eliminateKey = key;
+//       eliminateVec = vec;
+//     }
+//   });
+//   return eliminateVec;
+// }
+
+/*
+vec1 to vec2 represents the line
+return value norm12 is vector from vec2 to vec1
+*/
+export function closestPointOnLineToPoint(vec1, vec2, point) {
+  const norm12 = normaliseVec(subtractVectors(vec1, vec2));
+  const oa = subtractVectors(point, vec1);
+  const projectionOnLine = dotProduct(norm12, oa);
+  return {
+    norm12,
+    closestPointOnLine: addVectors(
+      vec1,
+      multiplyConst(norm12, projectionOnLine)
+    ),
+  };
 }
 
 export function directionToOrigin(simplex) {
@@ -156,15 +221,107 @@ export function directionToOrigin(simplex) {
   const iter = simplex.keys();
   const vec1 = stringToVec(iter.next().value);
   const vec2 = stringToVec(iter.next().value);
-  const norm12 = normaliseVec(subtractVectors(vec1, vec2));
-  const oa = subtractVectors(origin, vec1);
-  const projectionOnLine = dotProduct(norm12, oa);
-  const closestPointOnLine = addVectors(
+  const { closestPointOnLine, norm12 } = closestPointOnLineToPoint(
     vec1,
-    multiplyConst(norm12, projectionOnLine)
+    vec2,
+    origin
   );
-  const direction = subtractVectors(origin, closestPointOnLine);
-  return normaliseVec(direction);
+  const containsOrigin = magnitude(closestPointOnLine) < 0.01;
+
+  // closest point on line method degenerates when line goes through the point
+  // if it does norm12 is already the correct direction to the origin
+  // otherwise [0,0,0] - [0,0,0] == [0,0,0] and normalising causes division by zero
+  const direction = containsOrigin
+    ? norm12
+    : subtractVectors(origin, closestPointOnLine);
+
+  return {
+    direction: normaliseVec(direction),
+    containsOrigin,
+  };
+}
+
+/*
+Major help with the below from
+https://caseymuratori.com/blog_0003
+https://www.youtube.com/watch?v=Qupqu1xe7Io&t=2288s
+*/
+export function sameDirection(vec1, vec2) {
+  return dotProduct(vec1, vec2) > 0;
+}
+
+export function nearestSimplexFromLine(simplex) {
+  if (simplex.length != 2) {
+    throw new Error("Expected simplex to be a line.");
+  }
+  const b = simplex.at(0);
+  const a = simplex.at(1); // latest added
+
+  const ab = subtractVectors(b, a);
+  const ao = invertVector(a);
+
+  if (sameDirection(ab, ao)) {
+    // leave simplex as is, origin is closer to the line than point 'a'
+    return crossProduct(crossProduct(ab, ao), ab);
+  } else {
+    // remove 'b' from the simplex, origin is closer to 'a' than line 'ab'
+    simplex.shift();
+    return ao;
+  }
+}
+
+export function nearestSimplexFromTriangle(simplex) {
+  if (simplex.length != 3) {
+    throw new Error("Expected simplex to be a triangle.");
+  }
+
+  const c = simplex.at(0);
+  const b = simplex.at(1);
+  const a = simplex.at(2);
+
+  const ab = subtractVectors(b, a);
+  const ac = subtractVectors(c, a);
+  const abc = crossProduct(ab, ac);
+
+  const ao = invertVector(a);
+
+  if (sameDirection(crossProduct(abc, ac), ao)) {
+    if (sameDirection(ac, ao)) {
+      simplex.splice(1, 1); // remove b from the simplex
+      return crossProduct(crossProduct(ac, ao), ac);
+    } else {
+      if (sameDirection(ab, ao)) {
+        simplex.splice(0, 1); // remove c from the simplex
+        return crossProduct(crossProduct(ab, ao), ab);
+      } else {
+        // leave only a in the simplex
+        simplex.shift();
+        simplex.shift();
+        return ao;
+      }
+    }
+  } else {
+    if (sameDirection(crossProduct(ab, abc), ao)) {
+      if (sameDirection(ab, ao)) {
+        simplex.splice(0, 1); // remove c from the simplex
+        return crossProduct(crossProduct(ab, ao), ab);
+      } else {
+        // leave only a in the simplex
+        simplex.shift();
+        simplex.shift();
+        return ao;
+      }
+    } else {
+      if (sameDirection(abc, ao)) {
+        return abc;
+      } else {
+        // permute the triangle abc->acb
+        simplex.splice(1, 1);
+        simplex.push(b);
+        return invertVector(abc);
+      }
+    }
+  }
 }
 
 export function normalToOrigin(simplex) {
@@ -186,32 +343,28 @@ export function normalToOrigin(simplex) {
 
 export function nearestSimplex(simplex) {
   const origin = [0, 0, 0];
-  let containsOrigin;
+  let containsOrigin = false;
   let nextDirection;
 
-  if (simplex.size == 2) {
-    containsOrigin = false;
-    nextDirection = directionToOrigin(simplex);
-  } else if (simplex.size == 3 || simplex.size == 4) {
-    if (simplex.size == 4) {
-      const iter = simplex.keys();
+  if (simplex.length == 2) {
+    nextDirection = nearestSimplexFromLine(simplex);
+  } else if (simplex.length == 3 || simplex.length == 4) {
+    if (simplex.length == 4) {
       containsOrigin = pointInTetrahedron(
-        stringToVec(iter.next().value),
-        stringToVec(iter.next().value),
-        stringToVec(iter.next().value),
-        stringToVec(iter.next().value),
+        simplex[0],
+        simplex[1],
+        simplex[2],
+        simplex[3],
         origin
       );
-      eliminateFurthestPoint(simplex);
-    } else {
-      containsOrigin = false;
+      // remove last added point furthest away from origin
+      simplex.shift();
     }
-    nextDirection = normalToOrigin(simplex);
+
+    nextDirection = nearestSimplexFromTriangle(simplex);
   } else {
     throw new Error(
-      `simplex musty be of size 2, 3 or 4 but has size ${
-        simplex.size
-      }, ${simplex.keys()}`
+      `simplex musty be of size 2, 3 or 4 but has size ${simplex.length}, ${simplex}`
     );
   }
 
@@ -222,17 +375,33 @@ export function nearestSimplex(simplex) {
   };
 }
 
-export function gjkIntersectionSpheres(obj1, obj2, initDirection = [1, 0, 0]) {
+export function getSphereCollisionDetails(obj1, obj2) {
+  // assuming spheres for now
+  const a = obj1.position;
+  const b = obj2.position;
+  const ab = subtractVectors(b, a);
+  const normal = normaliseVec(ab);
+  const obj1Closest = addVectors(a, multiplyConst(normal, obj1.radius));
+  const obj2Closest = subtractVectors(b, multiplyConst(normal, obj2.radius));
+  return { normal, obj1Closest, obj2Closest };
+}
+
+export function gjkIntersectionSpheres(
+  obj1,
+  obj2,
+  initDirection = [0.57735, 0.57735, 0.57735]
+) {
   let A = subtractVectors(
     supportSphere(obj1, initDirection),
     supportSphere(obj2, invertVector(initDirection))
   );
-  const simplex = new Set([vecToString(A)]);
+  // const simplex = new Set([vecToString(A)]);
+  const simplex = [A];
   let nextDirection = subtractVectors([0, 0, 0], A);
   let containsOrigin = false;
 
   let count = 0;
-  while (count < 20) {
+  while (count < 10) {
     A = subtractVectors(
       supportSphere(obj1, nextDirection),
       supportSphere(obj2, invertVector(nextDirection))
@@ -241,15 +410,23 @@ export function gjkIntersectionSpheres(obj1, obj2, initDirection = [1, 0, 0]) {
     if (dotProduct(A, nextDirection) < 0) {
       return { collide: false };
     }
-    simplex.add(vecToString(A));
+    simplex.push(A);
     ({ nextDirection, containsOrigin } = nearestSimplex(simplex));
-    if (containsOrigin)
+    if (containsOrigin) {
+      // const obj1Closest = supportSphere(obj1, nextDirection);
+      // const obj2Closest = supportSphere(obj2, invertVector(nextDirection));
+      // const normal = normaliseVec(subtractVectors(obj1Closest, obj2Closest));
+      const { normal, obj1Closest, obj2Closest } = getSphereCollisionDetails(
+        obj1,
+        obj2
+      );
       return {
         collide: true,
-        normal: nextDirection,
-        obj1Closest: supportSphere(obj1, nextDirection),
-        obj2Closest: supportSphere(obj2, invertVector(nextDirection)),
+        normal,
+        obj1Closest,
+        obj2Closest,
       };
+    }
 
     count++;
   }

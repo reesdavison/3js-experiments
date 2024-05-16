@@ -12,13 +12,20 @@ import {
 
 import { describe, expect, it } from "vitest";
 
+function expectVectorClose(value, correct) {
+  expect(value).toHaveLength(correct.length);
+  correct.forEach((cor, index) => {
+    expect(value[index]).toBeCloseTo(cor);
+  });
+}
+
 describe("direction to origin", () => {
   it("gives direction -0.5,-0.5 with unit coordinates", () => {
     const vec1 = [1, 0, 0];
     const vec2 = [0, 1, 0];
     const simplex = new Set([vecToString(vec1), vecToString(vec2)]);
-    const vec3 = directionToOrigin(simplex);
-
+    const { direction: vec3, containsOrigin } = directionToOrigin(simplex);
+    expect(containsOrigin).toBeFalsy();
     const norm = Math.sqrt(0.5 ** 2 + 0.5 ** 2);
     expect(vec3[0]).toBeCloseTo(-0.5 / norm);
     expect(vec3[1]).toBeCloseTo(-0.5 / norm);
@@ -29,11 +36,22 @@ describe("direction to origin", () => {
     const vec1 = [2, -1, 0];
     const vec2 = [-1, 2, 0];
     const simplex = new Set([vecToString(vec1), vecToString(vec2)]);
-    const vec3 = directionToOrigin(simplex);
+    const { direction: vec3, containsOrigin } = directionToOrigin(simplex);
+    expect(containsOrigin).toBeFalsy();
     const norm = Math.sqrt(0.5 ** 2 + 0.5 ** 2);
     expect(vec3[0]).toBeCloseTo(-0.5 / norm);
     expect(vec3[1]).toBeCloseTo(-0.5 / norm);
     expect(vec3[2]).toBeCloseTo(0);
+  });
+
+  it("simplex line through origin", () => {
+    const simplex = new Set([
+      "2.220446049250313e-15,0,0",
+      "-2.999999999999998,0,0",
+    ]);
+    const { direction: vec3, containsOrigin } = directionToOrigin(simplex);
+    expect(containsOrigin).toBeTruthy();
+    expectVectorClose(vec3, [1, 0, 0]);
   });
 });
 
@@ -120,6 +138,18 @@ describe("normal towards origin of plane", () => {
     expect(direction[0]).toBeCloseTo(-1 / norm);
     expect(direction[1]).toBeCloseTo(-1 / norm);
     expect(direction[2]).toBeCloseTo(-1 / norm);
+  });
+
+  it("breaks currently", () => {
+    const simplex = new Set([
+      "0.540,-1,0",
+      "-1.6727,0.3198,0",
+      "-0.1915,0.2882,0",
+    ]);
+    //{'0.3400000000000025,-1,0', '-1.642854099858054,0.4201591172295682,0', '-0.2865817582014547,0.21948373293518864,0', '-1.1599999999999975,-1,1.5'}
+    const direction = normalToOrigin(simplex);
+    // foo
+    direction;
   });
 });
 
@@ -234,5 +264,32 @@ describe("resolve velocity", () => {
     expect(obj1.velocity[0]).toBeCloseTo(-1);
     expect(obj2.velocity[0]).toStrictEqual(obj2.velocity[1]);
     expect(obj2.velocity[0]).toBeCloseTo(1);
+  });
+
+  it("works with objects travelling along same dimension, obj1 much greater mass", () => {
+    const normal = [1, 0, 0];
+    const obj1 = {
+      mass: 100,
+      position: [0, 0, 0],
+      velocity: [1, 0, 0],
+      radius: 1,
+    };
+    const obj2 = {
+      mass: 1,
+      position: [1.5, 0, 0],
+      velocity: [-1, 0, 0],
+      radius: 1,
+    };
+    const collision = {
+      collide: true,
+      normal: [1, 0, 0],
+      obj1Closest: supportSphere(obj1, normal),
+      obj2Closest: supportSphere(obj2, invertVector(normal)),
+    };
+    expect(collision.obj1Closest).toStrictEqual([1, 0, 0]);
+    expect(collision.obj2Closest).toStrictEqual([0.5, 0, 0]);
+    resolveVelocity(collision, obj1, obj2);
+    expectVectorClose(obj1.velocity, [0.96039, 0, 0]);
+    expectVectorClose(obj2.velocity, [2.96039, 0, 0]);
   });
 });
