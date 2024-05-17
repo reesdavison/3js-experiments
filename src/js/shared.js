@@ -1,24 +1,49 @@
 import * as THREE from "three";
-import { cross, mul, sub } from "three/examples/jsm/nodes/Nodes.js";
 
-export function createBox(
-  scene,
+// export function createBox(
+//   scene,
+//   width = 1,
+//   height = 1,
+//   depth = 1,
+//   color = 0x0a0d4bff
+// ) {
+//   const geometry = new THREE.BoxGeometry(width, height, depth);
+//   const material = new THREE.MeshPhongMaterial({
+//     color: color,
+//     wireframe: true,
+//   });
+//   const cube = new THREE.Mesh(geometry, material);
+//   scene.add(cube);
+//   cube.position.y = -height / 2;
+//   return {
+//     cube: cube,
+//   };
+// }
+
+export function getCuboidCorners(
   width = 1,
   height = 1,
   depth = 1,
-  color = 0x0a0d4bff
+  position = [0, 0, 0],
+  rotationAxis = [1, 0, 0],
+  rotationRadians = 0
 ) {
-  const geometry = new THREE.BoxGeometry(width, height, depth);
-  const material = new THREE.MeshPhongMaterial({
-    color: color,
-    wireframe: true,
-  });
-  const cube = new THREE.Mesh(geometry, material);
-  scene.add(cube);
-  cube.position.y = -height / 2;
-  return {
-    cube: cube,
-  };
+  const w = width / 2;
+  const h = height / 2;
+  const d = depth / 2;
+  let corners = [
+    [w, h, d],
+    [-w, h, d],
+    [w, -h, d],
+    [w, h, -d],
+    [-w, -h, d],
+    [w, -h, -d],
+    [-w, h, -d],
+    [-w, -h, -d],
+  ];
+  corners = rotateVectorArray(corners, rotationAxis, rotationRadians);
+  corners = corners.map((vec) => addVectors(vec, position));
+  return corners;
 }
 
 export function createPlane(
@@ -27,7 +52,9 @@ export function createPlane(
   height = 1,
   position = [0, 0, 0],
   rotationAxis = [1, 0, 0],
-  rotationRadians = 0
+  rotationRadians = 0,
+  thickness = 0.1,
+  mass = 1
 ) {
   const geometry = new THREE.PlaneGeometry(width, height);
   const material = new THREE.MeshBasicMaterial({
@@ -40,21 +67,23 @@ export function createPlane(
     new THREE.Vector3(...rotationAxis),
     rotationRadians
   );
-  plane.position.x = 0;
-  plane.position.y = 0;
-  plane.position.z = 0;
-
-  // tl, tr, br, bl
-  const tl = new THREE.Vector3(-width / 2, height / 2, 0);
-  const tr = new THREE.Vector3(width / 2, height / 2, 0);
-  const br = new THREE.Vector3(width / 2, -height / 2, 0);
-  const bl = new THREE.Vector3(-width / 2, -height / 2, 0);
-
-  tl.applyAxisAngle();
+  plane.position.x = position[0];
+  plane.position.y = position[1];
+  plane.position.z = position[2];
 
   return {
     plane,
-    normal: plane.normal,
+    corners: getCuboidCorners(
+      width,
+      height,
+      thickness,
+      position,
+      rotationAxis,
+      rotationRadians
+    ),
+    support: supportCuboid,
+    position,
+    mass,
   };
 }
 
@@ -135,15 +164,34 @@ export function supportSphere(sphere, direction) {
   ];
 }
 
-export function supportCuboid(cuboid, direction) {
+export function supportCuboid(obj, direction) {
   const normDirection = normaliseVec(direction);
-  const dotProducts = cuboid.corners.map((point) =>
+
+  // all needs to be calculated relative to center of cuboid
+  const center = obj.position;
+  const toCornerVectors = obj.corners.map((vec) =>
+    subtractVectors(vec, center)
+  );
+
+  // a.b = |a||b|cos(theta)
+  const dotProducts = toCornerVectors.map((point) =>
     dotProduct(point, normDirection)
   );
 
-  const planeCorners = cuboid.corners.filter(
-    (point, index) => dotProducts[index] > 0
+  const planeCorners = toCornerVectors.filter(
+    (_point, index) => dotProducts[index] > 0
   );
+
+  const perfectCorners = toCornerVectors.filter(
+    (point, index) => dotProducts[index] > magnitude(point) - 0.1
+  );
+  if (perfectCorners.length) {
+    // we collide right in the corner
+    if (perfectCorners.length > 1) {
+      throw new Error("We'd only expect one corner to pass through the ray");
+    }
+    return normaliseVec(perfectCorners[0]);
+  }
 
   const a = planeCorners[0];
   const b = planeCorners[1];
@@ -180,6 +228,68 @@ export function vecToString(vec) {
 
 export function stringToVec(str) {
   return str.split(",").map((val) => Number(val));
+}
+
+/* 
+Hamiltonian product of quaternions
+Derivation requires liberal use of RH rule
+*/
+export function hamiltonianProduct(vec1, vec2) {
+  if (vec1.length !== 4 || vec2.length !== 4) {
+    throw new Error("Expecting 4 dimensional vectors");
+  }
+  return [
+    vec1[0] * vec2[0] -
+      vec1[1] * vec2[1] -
+      vec1[2] * vec2[2] -
+      vec1[3] * vec2[3],
+    vec1[0] * vec2[1] +
+      vec1[1] * vec2[0] +
+      vec1[2] * vec2[3] -
+      vec1[3] * vec2[2],
+    vec1[0] * vec2[2] -
+      vec1[1] * vec2[3] +
+      vec1[2] * vec2[0] +
+      vec1[3] * vec2[1],
+    vec1[0] * vec2[3] +
+      vec1[1] * vec2[2] -
+      vec1[2] * vec2[1] +
+      vec1[3] * vec2[0],
+  ];
+}
+
+/*
+Rotate a vector by a quarternion.
+*/
+export function rotateVector(vec, qtrn) {
+  // https://math.stackexchange.com/questions/40164/how-do-you-rotate-a-vector-by-a-unit-quaternion
+  const newVec = [0, ...vec];
+  const inverseQuarternion = [qtrn[0], -qtrn[1], -qtrn[2], -qtrn[3]];
+  const result = hamiltonianProduct(
+    hamiltonianProduct(qtrn, newVec),
+    inverseQuarternion
+  );
+  return [result[1], result[2], result[3]];
+}
+
+export function angleAxisToQuarternion(axis, radians) {
+  const normAxis = normaliseVec(axis);
+  const quarternion = [
+    Math.cos(radians / 2),
+    Math.sin(radians / 2) * normAxis[0],
+    Math.sin(radians / 2) * normAxis[1],
+    Math.sin(radians / 2) * normAxis[2],
+  ];
+  return quarternion;
+}
+
+export function rotateVectorAngleAxis(vec, axis, radians) {
+  const quarternion = angleAxisToQuarternion(axis, radians);
+  return rotateVector(vec, quarternion);
+}
+
+export function rotateVectorArray(arrayOfVec, axis, radians) {
+  return arrayOfVec.map((vec) => rotateVectorAngleAxis(vec, axis, radians));
 }
 
 export function crossProduct(vec1, vec2) {
@@ -324,6 +434,10 @@ export function nearestSimplexFromLine(simplex) {
   const ab = subtractVectors(b, a);
   const ao = invertVector(a);
 
+  if (dotProduct(ab, ao) / magnitude(ab) / magnitude(ao) > 0.99) {
+    return true;
+  }
+
   if (sameDirection(ab, ao)) {
     // leave simplex as is, origin is closer to the line than point 'a'
     return crossProduct(crossProduct(ab, ao), ab);
@@ -412,6 +526,9 @@ export function nearestSimplex(simplex) {
 
   if (simplex.length == 2) {
     nextDirection = nearestSimplexFromLine(simplex);
+    if (nextDirection === true) {
+      containsOrigin = true;
+    }
   } else if (simplex.length == 3 || simplex.length == 4) {
     if (simplex.length == 4) {
       containsOrigin = pointInTetrahedron(
@@ -450,16 +567,21 @@ export function getSphereCollisionDetails(obj1, obj2) {
   return { normal, obj1Closest, obj2Closest };
 }
 
-export function gjkIntersectionSpheres(
+export function getSphereCuboidCollisionDetails(obj1, obj2) {
+  const sphere = obj1.sphere ? obj1 : obj2;
+  const cuboid = obj1.corners ? obj1 : obj2;
+  const normal = TODO;
+}
+
+export function gjkIntersection(
   obj1,
   obj2,
   initDirection = [0.57735, 0.57735, 0.57735]
 ) {
   let A = subtractVectors(
-    supportSphere(obj1, initDirection),
-    supportSphere(obj2, invertVector(initDirection))
+    obj1.support(obj1, initDirection),
+    obj2.support(obj2, invertVector(initDirection))
   );
-  // const simplex = new Set([vecToString(A)]);
   const simplex = [A];
   let nextDirection = subtractVectors([0, 0, 0], A);
   let containsOrigin = false;
@@ -467,8 +589,8 @@ export function gjkIntersectionSpheres(
   let count = 0;
   while (count < 10) {
     A = subtractVectors(
-      supportSphere(obj1, nextDirection),
-      supportSphere(obj2, invertVector(nextDirection))
+      obj1.support(obj1, nextDirection),
+      obj2.support(obj2, invertVector(nextDirection))
     );
 
     if (dotProduct(A, nextDirection) < 0) {
@@ -477,13 +599,17 @@ export function gjkIntersectionSpheres(
     simplex.push(A);
     ({ nextDirection, containsOrigin } = nearestSimplex(simplex));
     if (containsOrigin) {
-      // const obj1Closest = supportSphere(obj1, nextDirection);
-      // const obj2Closest = supportSphere(obj2, invertVector(nextDirection));
-      // const normal = normaliseVec(subtractVectors(obj1Closest, obj2Closest));
-      const { normal, obj1Closest, obj2Closest } = getSphereCollisionDetails(
-        obj1,
-        obj2
-      );
+      console.log("COLLISION ", obj1, obj2);
+      // let obj1Closest, obj2Closest, normal;
+      if (obj1.sphere && obj2.sphere) {
+        const { normal, obj1Closest, obj2Closest } = getSphereCollisionDetails(
+          obj1,
+          obj2
+        );
+      } else {
+        const { normal, obj1Closest, obj2Closest } =
+          getSphereCuboidCollisionDetails(obj1, obj2);
+      }
       return {
         collide: true,
         normal,

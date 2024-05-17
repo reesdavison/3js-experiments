@@ -9,6 +9,10 @@ import {
   normaliseVec,
   resolveVelocity,
   supportCuboid,
+  rotateVectorArray,
+  rotateVectorAngleAxis,
+  getCuboidCorners,
+  gjkIntersection,
 } from "../src/js/shared";
 
 import { describe, expect, it } from "vitest";
@@ -307,6 +311,8 @@ describe("support cuboid works as expected", () => {
       [-1, 1, -1],
       [-1, -1, -1],
     ],
+    position: [0, 0, 0],
+    support: supportCuboid,
   };
 
   it("works for right direction unit sphere", () => {
@@ -331,5 +337,18 @@ describe("support cuboid works as expected", () => {
     const direction = [-1, -0.5, 0];
     const intersect = supportCuboid(unitCube, direction);
     expectVectorClose(intersect, [-1, -0.5, 0]);
+  });
+
+  it("works for a rotated cube", () => {
+    const direction = [1, 0, 0];
+    const angle = 50 * (Math.PI / 180); // 30 degrees
+    const cube = {
+      corners: rotateVectorArray(unitCube.corners, [0, 0, 1], angle),
+      position: [0, 0, 0],
+      support: supportCuboid,
+    };
+    const intersect = supportCuboid(cube, direction);
+    // should still be along x axis
+    expectVectorClose(intersect, [1.305, 0, 0]);
   });
 });
