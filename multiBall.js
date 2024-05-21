@@ -12,6 +12,9 @@ const camera = new THREE.PerspectiveCamera(
   1000
 );
 
+camera.translateY(1);
+camera.translateZ(3);
+
 // Gravitational constant
 const G = 6.674 * 10 ** -11;
 
@@ -95,25 +98,25 @@ console.log(bottomPlane);
 // backPlane.plane.position.y = 1;
 // backPlane.plane.position.z = 0;
 
-// const sphere1 = createSphere(
-//   scene,
-//   [-2, 1.5, 0],
-//   // [2, 0.25, 0],
-//   [2, 0, 0],
-//   10 ** 3, // mass
-//   0x446df6,
-//   0.4,
-//   0.8
-// );
-// const sphere2 = createSphere(
-//   scene,
-//   [2, 1.2, 0],
-//   [-2, 0, 0],
-//   10 ** 3, // mass
-//   0x446df6,
-//   0.4,
-//   0.8
-// );
+const sphere1 = createSphere(
+  scene,
+  [-2, 1.5, 0],
+  // [2, 0.25, 0],
+  [2, 0, 0],
+  10 ** 3, // mass
+  0x446df6,
+  0.4,
+  0.8
+);
+const sphere2 = createSphere(
+  scene,
+  [2, 1.2, 0],
+  [-2, 0, 0],
+  10 ** 3, // mass
+  0x446df6,
+  0.4,
+  0.8
+);
 
 const sphere3 = createSphere(
   scene,
@@ -138,8 +141,8 @@ function updateArrow(arrowObj, direction, position) {
 const TIME_STEP = 0.01;
 let time = 0;
 
-// const allObjects = [sphere1, sphere2];
-const allObjects = [sphere3, bottomPlane];
+const allObjects = [sphere1, sphere2, sphere3, bottomPlane];
+// const allObjects = [sphere3, bottomPlane];
 
 function animate() {
   requestAnimationFrame(animate);
@@ -159,12 +162,12 @@ function animate() {
     }
   }
 
-  // eulerStep([0, 0, 0], sphere1);
-  // eulerStep([0, 0, 0], sphere2);
+  eulerStep([0, 0, 0], sphere1);
+  eulerStep([0, 0, 0], sphere2);
   eulerStep([0, 0, 0], sphere3);
 
-  // updatePosition(sphere1);
-  // updatePosition(sphere2);
+  updatePosition(sphere1);
+  updatePosition(sphere2);
   updatePosition(sphere3);
 
   renderer.render(scene, camera);
