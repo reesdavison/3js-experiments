@@ -1,5 +1,12 @@
 import * as THREE from "three";
 
+export function getGravityForce(obj, g = 9.80665) {
+  if (!obj.mass) {
+    throw new Error("Expect object to have mass");
+  }
+  return [0, -obj.mass * g, 0];
+}
+
 export function getCuboidCorners(
   width = 1,
   height = 1,
@@ -112,13 +119,14 @@ export function createBox(
   rotationAxis = [1, 0, 0],
   rotationRadians = 0,
   thickness = 0.1,
-  mass = 1
+  mass = 1,
+  color = 0xb7c9bc,
+  fixed = false
 ) {
-  const geometry = new THREE.PlaneGeometry(width, height);
-  // const geometry = new THREE.BoxGeometry(width, height, thickness);
-  const material = new THREE.MeshBasicMaterial({
-    color: 0xb7c9bc,
-    side: THREE.DoubleSide,
+  // const geometry = new THREE.PlaneGeometry(width, height);
+  const geometry = new THREE.BoxGeometry(width, height, thickness);
+  const material = new THREE.MeshPhongMaterial({
+    color,
   });
   const plane = new THREE.Mesh(geometry, material);
   scene.add(plane);
@@ -144,6 +152,7 @@ export function createBox(
     position,
     velocity,
     mass,
+    fixed,
   };
 }
 
@@ -161,7 +170,8 @@ export function createSphere(
   mass = 1,
   color = 0xaf748d,
   radius = 0.25,
-  restitution = 1.0
+  restitution = 1.0,
+  fixed = false
 ) {
   const geometrySphere = new THREE.SphereGeometry(radius);
   const materialSphere = new THREE.MeshPhongMaterial({
@@ -177,6 +187,7 @@ export function createSphere(
     radius: radius,
     restitution: restitution,
     support: supportSphere,
+    fixed,
   };
 }
 
@@ -230,29 +241,13 @@ export function supportCuboid(obj, direction) {
 
 /*
 A support function takes a direction vector and returns the point on the shape farthest along that direction.
+This one returns the N closest.
 */
 export function supportCuboidTopK(obj, direction, k) {
   const normDirection = normaliseVec(direction);
 
   // all needs to be calculated relative to center of cuboid
   const center = obj.position;
-  // const toCornerVectors = obj.corners.map((vec) =>
-  //   subtractVectors(vec, center)
-  // );
-
-  // // a.b = |a||b|cos(theta)
-  // const dotProducts = toCornerVectors.map((point) =>
-  //   dotProduct(point, normDirection)
-  // );
-
-  // let bestIndex;
-  // let largestDotProduct = -9999;
-  // toCornerVectors.forEach((_point, index) => {
-  //   if (dotProducts[index] > largestDotProduct) {
-  //     bestIndex = index;
-  //     largestDotProduct = dotProducts[index];
-  //   }
-  // });
 
   // We could use a heap for this but we'd need our own implementation
   // Max size 8 so unlikely to be a huge gain from the effort
@@ -269,48 +264,6 @@ export function supportCuboidTopK(obj, direction, k) {
   // we need to use the vector from the origin not the center
   const result = sortedDP.slice(0, k).map((res) => obj.corners[res.index]);
   return result;
-
-  // we need to use the vector from the origin not the center
-  // return obj.corners[bestIndex];
-
-  // const perfectCorners = toCornerVectors.filter(
-  //   (point, index) => dotProducts[index] > magnitude(point) - 0.1
-  // );
-  // if (perfectCorners.length) {
-  //   // we collide right in the corner
-  //   if (perfectCorners.length > 1) {
-  //     throw new Error("We'd only expect one corner to pass through the ray");
-  //   }
-  //   return normaliseVec(perfectCorners[0]);
-  // }
-
-  // const a = planeCorners[0];
-  // const b = planeCorners[1];
-  // const c = planeCorners[2];
-  // const d = planeCorners[3];
-
-  // const ab = subtractVectors(b, a);
-  // const ac = subtractVectors(c, a);
-
-  // // this assumes ab and ac are perpendicular
-  // if (
-  //   Math.abs(Math.acos(dotProduct(ab, ac) / (magnitude(ab) * magnitude(ac)))) >
-  //   5
-  // ) {
-  //   console.log("ERROR lines not perpendicular");
-  // }
-
-  // const abc = normaliseVec(crossProduct(ab, ac));
-
-  // const origin = [0, 0, 0];
-  // const valD =
-  //   dotProduct(subtractVectors(a, origin), abc) /
-  //   dotProduct(normDirection, abc);
-  // const pointOfCollision = addVectors(
-  //   origin,
-  //   multiplyConst(normDirection, valD)
-  // );
-  // return pointOfCollision;
 }
 
 export function intersectLineAndPlane(
@@ -445,8 +398,6 @@ export function sameSideLine(v1, v2, p) {
   return (p[0] - v2[0]) * (v1[1] - v2[1]) - (v1[0] - v2[0]) * (v0[1] - v2[1]);
 }
 
-export function pointInTriangle(v1, v2, v3, p) {}
-
 export function squaredDistanceFromOrigin(vec) {
   return vec[0] ** 2 + vec[1] ** 2 + vec[2] ** 2;
 }
@@ -464,21 +415,6 @@ export function multiplyConst(vec, constant) {
   return [vec[0] * constant, vec[1] * constant, vec[2] * constant];
 }
 
-// export function eliminateFurthestPoint(simplex) {
-//   let largestDist = -1;
-//   let eliminateKey = undefined;
-//   let eliminateVec = undefined;
-//   simplex.forEach((vec) => {
-//     const sqd = squaredDistanceFromOrigin(vec);
-//     if (sqd > largestDist) {
-//       largestDist = sqd;
-//       eliminateKey = key;
-//       eliminateVec = vec;
-//     }
-//   });
-//   return eliminateVec;
-// }
-
 /*
 vec1 to vec2 represents the line
 return value norm12 is vector from vec2 to vec1
@@ -493,34 +429,6 @@ export function closestPointOnLineToPoint(vec1, vec2, point) {
       vec1,
       multiplyConst(norm12, projectionOnLine)
     ),
-  };
-}
-
-export function directionToOrigin(simplex) {
-  if (simplex.size != 2) {
-    throw new Error("Expected simplex to be a line.");
-  }
-  const origin = [0, 0, 0];
-  const iter = simplex.keys();
-  const vec1 = stringToVec(iter.next().value);
-  const vec2 = stringToVec(iter.next().value);
-  const { closestPointOnLine, norm12 } = closestPointOnLineToPoint(
-    vec1,
-    vec2,
-    origin
-  );
-  const containsOrigin = magnitude(closestPointOnLine) < 0.01;
-
-  // closest point on line method degenerates when line goes through the point
-  // if it does norm12 is already the correct direction to the origin
-  // otherwise [0,0,0] - [0,0,0] == [0,0,0] and normalising causes division by zero
-  const direction = containsOrigin
-    ? norm12
-    : subtractVectors(origin, closestPointOnLine);
-
-  return {
-    direction: normaliseVec(direction),
-    containsOrigin,
   };
 }
 
@@ -661,11 +569,6 @@ export function nearestSimplex(simplex) {
     );
   }
 
-  // if (magnitude(nextDirection) < 0.2) {
-  //   containsOrigin = true;
-  // }
-  // nextDirection = normaliseVec(nextDirection);
-
   return {
     simplex,
     nextDirection: normaliseVec(nextDirection),
@@ -695,11 +598,6 @@ export function getSphereCuboidCollisionDetails(obj1, obj2) {
     cuboid.position
   );
 
-  // const cuboidDirection = normaliseVec(cuboidToSphereDirection);
-
-  // const sphereDirection = invertVector(cuboidDirection);
-  // const cuboidCenter = cuboid.position;
-
   const outerNormals = getOuterPlaneNormals(cuboid.corners);
 
   const sortedDotPlanes = Object.entries(outerNormals)
@@ -718,24 +616,6 @@ export function getSphereCuboidCollisionDetails(obj1, obj2) {
     sortedDotPlanes[0].planeDirectionStr
   )[0];
   const planePoint = cuboid.corners[planePointIndex];
-
-  // let index = 0;
-  // for (const [key, norm] of Object.entries(outerNormals)) {
-  //   dotProduct()
-  // }
-
-  // const foo = cuboid.corners.filter((cornerVec) => {
-  //   const centerToCorner = subtractVectors(cornerVec, cuboidCenter);
-  //   const centerToSphere = subtractVectors(sphere.position, cuboidCenter);
-  //   return sameDirection(centerToCorner, centerToSphere);
-  // });
-
-  // const a = cuboid.corners[squaredDistances[0].index];
-  // const b = cuboid.corners[squaredDistances[1].index];
-  // const c = cuboid.corners[squaredDistances[2].index];
-  // const ab = subtractVectors(b, a);
-  // const ac = subtractVectors(c, a);
-  // const moreAccurateNorm = normaliseVec(crossProduct(ab, ac));
 
   const sphereDirection = invertVector(moreAccurateNorm);
 
@@ -780,11 +660,7 @@ export function gjkIntersection(
     simplex.push(A);
     ({ nextDirection, containsOrigin } = nearestSimplex(simplex));
     if (containsOrigin) {
-      console.log("COLLISION ", obj1, obj2);
       let obj1Closest, obj2Closest, normal;
-      // const normal = normaliseVec(A);
-      // const obj1Closest = obj1.support(obj1, nextDirection);
-      // const obj2Closest = obj2.support(obj2, invertVector(nextDirection));
       if (obj1.sphere && obj2.sphere) {
         ({ normal, obj1Closest, obj2Closest } = getSphereCollisionDetails(
           obj1,

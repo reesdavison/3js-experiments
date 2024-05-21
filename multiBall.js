@@ -24,10 +24,10 @@ document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 
-const light = new THREE.AmbientLight(0x404040, 10); // soft white light
+const light = new THREE.AmbientLight(0x404040, 5); // soft white light
 scene.add(light);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 10);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 5);
 scene.add(directionalLight);
 
 camera.position.z = 5;
@@ -38,6 +38,7 @@ import {
   createHelperGrid,
   gjkIntersection,
   resolveCollision,
+  getGravityForce,
 } from "./src/js/shared.js";
 
 function createArrow(newDir, newOrigin) {
@@ -81,27 +82,35 @@ createHelperGrid(scene);
 
 const bottomPlane = createBox(
   scene,
-  10,
-  10,
+  5,
+  5,
   [0, 0, 0],
   [0, 0, 0],
   [1, 0, 0],
   Math.PI / 2,
   0.2,
-  999999 // high mass to make immovable in collision resolution
+  999999, // high mass to make immovable in collision resolution
+  0x456e4e,
+  true
 );
-console.log(bottomPlane);
 
-// const backPlane = createPlane(scene, 8, 5);
-// backPlane.plane.rotateY(90);
-// backPlane.plane.position.x = 0;
-// backPlane.plane.position.y = 1;
-// backPlane.plane.position.z = 0;
+const leftPlane = createBox(
+  scene,
+  5,
+  5,
+  [-2.5, 2.5, 0],
+  [0, 0, 0],
+  [0, 1, 0],
+  Math.PI / 2,
+  0.2,
+  999999, // high mass to make immovable in collision resolution
+  0x456e4e,
+  true
+);
 
 const sphere1 = createSphere(
   scene,
   [-2, 1.5, 0],
-  // [2, 0.25, 0],
   [2, 0, 0],
   10 ** 3, // mass
   0x446df6,
@@ -141,8 +150,7 @@ function updateArrow(arrowObj, direction, position) {
 const TIME_STEP = 0.01;
 let time = 0;
 
-const allObjects = [sphere1, sphere2, sphere3, bottomPlane];
-// const allObjects = [sphere3, bottomPlane];
+const allObjects = [sphere1, sphere2, sphere3, bottomPlane, leftPlane];
 
 function animate() {
   requestAnimationFrame(animate);
@@ -152,6 +160,9 @@ function animate() {
       if (i !== j) {
         const objI = allObjects[i];
         const objJ = allObjects[j];
+        if (objI.fixed && objJ.fixed) {
+          continue;
+        }
         const collision = gjkIntersection(objI, objJ);
         const { collide, normal: collideNormal } = collision;
         if (collide) {
@@ -162,9 +173,9 @@ function animate() {
     }
   }
 
-  eulerStep([0, 0, 0], sphere1);
-  eulerStep([0, 0, 0], sphere2);
-  eulerStep([0, 0, 0], sphere3);
+  eulerStep(getGravityForce(sphere1), sphere1);
+  eulerStep(getGravityForce(sphere2), sphere2);
+  eulerStep(getGravityForce(sphere3), sphere3);
 
   updatePosition(sphere1);
   updatePosition(sphere2);
