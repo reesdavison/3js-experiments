@@ -30,7 +30,7 @@ scene.add(directionalLight);
 camera.position.z = 5;
 
 import {
-  createPlane,
+  createBox,
   createSphere,
   createHelperGrid,
   gjkIntersection,
@@ -76,10 +76,11 @@ function eulerStep(force, obj) {
 
 createHelperGrid(scene);
 
-const bottomPlane = createPlane(
+const bottomPlane = createBox(
   scene,
   10,
   10,
+  [0, 0, 0],
   [0, 0, 0],
   [1, 0, 0],
   Math.PI / 2,

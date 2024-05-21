@@ -17,12 +17,7 @@ import {
 
 import { describe, expect, it } from "vitest";
 
-function expectVectorClose(value, correct) {
-  expect(value).toHaveLength(correct.length);
-  correct.forEach((cor, index) => {
-    expect(value[index]).toBeCloseTo(cor);
-  });
-}
+import { expectVectorClose } from "./testHelpers";
 
 describe("direction to origin", () => {
   it("gives direction -0.5,-0.5 with unit coordinates", () => {
@@ -318,25 +313,25 @@ describe("support cuboid works as expected", () => {
   it("works for right direction unit sphere", () => {
     const direction = [1, 0, 0];
     const intersect = supportCuboid(unitCube, direction);
-    expectVectorClose(intersect, [1, 0, 0]);
+    expectVectorClose(intersect, [1, 1, 1]);
   });
 
   it("works for left direction unit sphere", () => {
     const direction = [-1, 0, 0];
     const intersect = supportCuboid(unitCube, direction);
-    expectVectorClose(intersect, [-1, 0, 0]);
+    expectVectorClose(intersect, [-1, 1, 1]);
   });
 
   it("works for an angle", () => {
     const direction = [1, 0.5, 0];
     const intersect = supportCuboid(unitCube, direction);
-    expectVectorClose(intersect, [1, 0.5, 0]);
+    expectVectorClose(intersect, [1, 1, 1]);
   });
 
   it("works for an angle opposite", () => {
-    const direction = [-1, -0.5, 0];
+    const direction = [-1, -1, 1];
     const intersect = supportCuboid(unitCube, direction);
-    expectVectorClose(intersect, [-1, -0.5, 0]);
+    expectVectorClose(intersect, [-1, -1, 1]);
   });
 
   it("works for a rotated cube", () => {
@@ -349,6 +344,6 @@ describe("support cuboid works as expected", () => {
     };
     const intersect = supportCuboid(cube, direction);
     // should still be along x axis
-    expectVectorClose(intersect, [1.305, 0, 0]);
+    expectVectorClose(intersect, [1.408, 0.123, 1]);
   });
 });

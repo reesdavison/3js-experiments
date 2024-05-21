@@ -31,7 +31,7 @@ camera.position.z = 5;
 
 import {
   createSphere,
-  gjkIntersectionSpheres,
+  gjkIntersection,
   resolveCollision,
 } from "./src/js/shared.js";
 
@@ -125,7 +125,7 @@ let time = 0;
 function animate() {
   requestAnimationFrame(animate);
 
-  const collision = gjkIntersectionSpheres(sphere1, sphere2);
+  const collision = gjkIntersection(sphere1, sphere2);
   const { collide, normal: collideNormal } = collision;
 
   if (collide) {
