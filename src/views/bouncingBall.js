@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
+import { createSphere } from "../library/sphere.js";
+import { addVectors } from "../library/vector.js";
+
 // 3js setup + camera + light
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xdbdbcc);
@@ -32,13 +35,9 @@ scene.add(light);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 10);
 scene.add(directionalLight);
 
-// const helper = new THREE.DirectionalLightHelper(directionalLight, 5);
-// scene.add(helper);
-
 camera.position.z = 5;
 
 // functions
-import { createSphere } from "./src/js/shared.js";
 
 function createGround(width = 1, height = 1, depth = 1, color = 0x0a0d4bff) {
   const geometry = new THREE.BoxGeometry(width, height, depth);
@@ -125,17 +124,6 @@ function eulerStep(force, obj, useGroundConstraint = false) {
   obj.velocity = [vel0, vel1, vel2];
 }
 
-function addForces(...forces) {
-  return forces.reduce(
-    (prev, force) => [
-      prev[0] + force[0],
-      prev[1] + force[1],
-      prev[2] + force[2],
-    ],
-    [0, 0, 0]
-  );
-}
-
 // simulate earth
 // we could use g=9.81 but we get to re-use our code this way
 const earth = createSphere(
@@ -165,10 +153,10 @@ let time = 0;
 function animate() {
   requestAnimationFrame(animate);
 
-  const forceOnEarth = addForces(getForce(earth, sphere2));
+  const forceOnEarth = addVectors(getForce(earth, sphere2));
 
   const forceOfGravity = getForce(sphere2, earth);
-  const forceOnSphere2 = addForces(forceOfGravity);
+  const forceOnSphere2 = addVectors(forceOfGravity);
 
   console.log(sphere2);
 

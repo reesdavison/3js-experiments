@@ -1,6 +1,11 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
+import { gjkIntersection, resolveCollision } from "../library/collision.js";
+import { createBox } from "../library/box.js";
+import { createSphere } from "../library/sphere.js";
+import { createHelperGrid, getGravityForce } from "../library/helpers.js";
+
 // 3js setup + camera + light
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xdbdbcc);
@@ -31,15 +36,6 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 5);
 scene.add(directionalLight);
 
 camera.position.z = 5;
-
-import {
-  createBox,
-  createSphere,
-  createHelperGrid,
-  gjkIntersection,
-  resolveCollision,
-  getGravityForce,
-} from "./src/js/shared.js";
 
 function createArrow(newDir, newOrigin) {
   const dir = new THREE.Vector3(...newDir);

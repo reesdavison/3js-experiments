@@ -3,7 +3,7 @@ import {
   supportCuboid,
   getCuboidCorners,
   gjkIntersection,
-} from "../src/js/shared";
+} from "../src/library/collision";
 
 import { expectVectorClose } from "./testHelpers";
 

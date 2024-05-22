@@ -1,6 +1,10 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
+import { createSphere } from "../library/sphere.js";
+
+import { gjkIntersection, resolveCollision } from "../library/collision.js";
+
 // 3js setup + camera + light
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xdbdbcc);
@@ -28,12 +32,6 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 10);
 scene.add(directionalLight);
 
 camera.position.z = 5;
-
-import {
-  createSphere,
-  gjkIntersection,
-  resolveCollision,
-} from "./src/js/shared.js";
 
 function createArrow(newDir, newOrigin) {
   const dir = new THREE.Vector3(...newDir);
@@ -72,24 +70,6 @@ function eulerStep(force, obj) {
   obj.velocity = [vel0, vel1, vel2];
 }
 
-// const sphere1 = createSphere(
-//   scene,
-//   [-2, -0.25, 0],
-//   [1, 0, 0],
-//   10 ** 3, // mass
-//   0x446df6,
-//   0.75,
-//   0.8
-// );
-// const sphere2 = createSphere(
-//   scene,
-//   [2, 0.25, 0],
-//   [-1, 0, 0],
-//   10 ** 3, // mass
-//   0x446df6,
-//   0.75,
-//   0.8
-// );
 const sphere1 = createSphere(
   scene,
   [-2, -2, 0],

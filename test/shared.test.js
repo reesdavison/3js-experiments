@@ -1,20 +1,19 @@
-import {
-  vecToString,
-  supportSphere,
-  pointInTetrahedron,
-  normalToOrigin,
-  invertVector,
-  resolvePosition,
-  normaliseVec,
-  resolveVelocity,
-  supportCuboid,
-  rotateVectorArray,
-  rotateVectorAngleAxis,
-  getCuboidCorners,
-  gjkIntersection,
-} from "../src/js/shared";
-
 import { describe, expect, it } from "vitest";
+
+import {
+  pointInTetrahedron,
+  resolvePosition,
+  resolveVelocity,
+  rotateVectorArray,
+} from "../src/library/collision";
+import { supportSphere } from "../src/library/sphere";
+import { supportCuboid } from "../src/library/box";
+import { pointInTetrahedron } from "../src/library/collision";
+import {
+  invertVector,
+  normaliseVec,
+  rotateVectorArray,
+} from "../src/library/vector";
 
 import { expectVectorClose } from "./testHelpers";
 
@@ -82,37 +81,6 @@ describe("point inside tetrahedron", () => {
     const p1 = [-1, -1, -1];
     const inside = pointInTetrahedron(vec1, vec2, vec3, vec4, p1);
     expect(inside).toBeFalsy();
-  });
-});
-
-describe("normal towards origin of plane", () => {
-  it("returns true for simple case", () => {
-    const vec1 = [10, 0, 0];
-    const vec2 = [0, 10, 0];
-    const vec3 = [0, 0, 10];
-
-    const simplex = new Set([
-      vecToString(vec1),
-      vecToString(vec2),
-      vecToString(vec3),
-    ]);
-    const direction = normalToOrigin(simplex);
-    const norm = Math.sqrt(3);
-    expect(direction[0]).toBeCloseTo(-1 / norm);
-    expect(direction[1]).toBeCloseTo(-1 / norm);
-    expect(direction[2]).toBeCloseTo(-1 / norm);
-  });
-
-  it("breaks currently", () => {
-    const simplex = new Set([
-      "0.540,-1,0",
-      "-1.6727,0.3198,0",
-      "-0.1915,0.2882,0",
-    ]);
-    //{'0.3400000000000025,-1,0', '-1.642854099858054,0.4201591172295682,0', '-0.2865817582014547,0.21948373293518864,0', '-1.1599999999999975,-1,1.5'}
-    const direction = normalToOrigin(simplex);
-    // foo
-    direction;
   });
 });
 
