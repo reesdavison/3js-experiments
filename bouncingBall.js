@@ -11,7 +11,9 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000
 );
-camera.position.y = 3;
+
+camera.translateY(1);
+camera.translateZ(3);
 
 console.log(camera.position);
 

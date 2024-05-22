@@ -138,6 +138,12 @@ export function createBox(
   plane.position.y = position[1];
   plane.position.z = position[2];
 
+  function updatePosition(obj) {
+    obj.plane.position.x = obj.position[0];
+    obj.plane.position.y = obj.position[1];
+    obj.plane.position.z = obj.position[2];
+  }
+
   return {
     plane,
     corners: getCuboidCorners(
@@ -153,6 +159,7 @@ export function createBox(
     velocity,
     mass,
     fixed,
+    updatePosition,
   };
 }
 
@@ -179,6 +186,13 @@ export function createSphere(
   });
   const sphere = new THREE.Mesh(geometrySphere, materialSphere);
   scene.add(sphere);
+
+  function updatePosition(obj) {
+    obj.sphere.position.x = obj.position[0];
+    obj.sphere.position.y = obj.position[1];
+    obj.sphere.position.z = obj.position[2];
+  }
+
   return {
     sphere: sphere,
     mass: mass,
@@ -188,6 +202,7 @@ export function createSphere(
     restitution: restitution,
     support: supportSphere,
     fixed,
+    updatePosition,
   };
 }
 

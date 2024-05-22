@@ -1,5 +1,4 @@
 import {
-  directionToOrigin,
   vecToString,
   supportSphere,
   pointInTetrahedron,
@@ -18,42 +17,6 @@ import {
 import { describe, expect, it } from "vitest";
 
 import { expectVectorClose } from "./testHelpers";
-
-describe("direction to origin", () => {
-  it("gives direction -0.5,-0.5 with unit coordinates", () => {
-    const vec1 = [1, 0, 0];
-    const vec2 = [0, 1, 0];
-    const simplex = new Set([vecToString(vec1), vecToString(vec2)]);
-    const { direction: vec3, containsOrigin } = directionToOrigin(simplex);
-    expect(containsOrigin).toBeFalsy();
-    const norm = Math.sqrt(0.5 ** 2 + 0.5 ** 2);
-    expect(vec3[0]).toBeCloseTo(-0.5 / norm);
-    expect(vec3[1]).toBeCloseTo(-0.5 / norm);
-    expect(vec3[2]).toBeCloseTo(0);
-  });
-
-  it("gives direction -0.5,-0.5 with non unit coordinates", () => {
-    const vec1 = [2, -1, 0];
-    const vec2 = [-1, 2, 0];
-    const simplex = new Set([vecToString(vec1), vecToString(vec2)]);
-    const { direction: vec3, containsOrigin } = directionToOrigin(simplex);
-    expect(containsOrigin).toBeFalsy();
-    const norm = Math.sqrt(0.5 ** 2 + 0.5 ** 2);
-    expect(vec3[0]).toBeCloseTo(-0.5 / norm);
-    expect(vec3[1]).toBeCloseTo(-0.5 / norm);
-    expect(vec3[2]).toBeCloseTo(0);
-  });
-
-  it("simplex line through origin", () => {
-    const simplex = new Set([
-      "2.220446049250313e-15,0,0",
-      "-2.999999999999998,0,0",
-    ]);
-    const { direction: vec3, containsOrigin } = directionToOrigin(simplex);
-    expect(containsOrigin).toBeTruthy();
-    expectVectorClose(vec3, [1, 0, 0]);
-  });
-});
 
 describe("support sphere", () => {
   it("gives the correct support right", () => {

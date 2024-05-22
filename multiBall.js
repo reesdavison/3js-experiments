@@ -52,12 +52,6 @@ function createArrow(newDir, newOrigin) {
   return arrowHelper;
 }
 
-function updatePosition(obj) {
-  obj.sphere.position.x = obj.position[0];
-  obj.sphere.position.y = obj.position[1];
-  obj.sphere.position.z = obj.position[2];
-}
-
 function eulerStep(force, obj) {
   // this is the semi-implicit euler method
   // that's because we update position using
@@ -108,6 +102,20 @@ const leftPlane = createBox(
   true
 );
 
+// const movableBox = createBox(
+//   scene,
+//   0.5,
+//   0.5,
+//   [2, 4, 0],
+//   [-1, 0, 0],
+//   [0, 1, 0],
+//   Math.PI / 2,
+//   0.5,
+//   10 ** 3,
+//   0x446df6,
+//   false
+// );
+
 const sphere1 = createSphere(
   scene,
   [-2, 1.5, 0],
@@ -115,7 +123,8 @@ const sphere1 = createSphere(
   10 ** 3, // mass
   0x446df6,
   0.4,
-  0.8
+  0.8,
+  false
 );
 const sphere2 = createSphere(
   scene,
@@ -124,7 +133,8 @@ const sphere2 = createSphere(
   10 ** 3, // mass
   0x446df6,
   0.4,
-  0.8
+  0.8,
+  false
 );
 
 const sphere3 = createSphere(
@@ -134,7 +144,8 @@ const sphere3 = createSphere(
   10 ** 3,
   0x446df6,
   0.4,
-  0.8
+  0.8,
+  false
 );
 
 const normalArrow = createArrow([90, 90, 90], [90, 90, 90]);
@@ -150,7 +161,16 @@ function updateArrow(arrowObj, direction, position) {
 const TIME_STEP = 0.01;
 let time = 0;
 
-const allObjects = [sphere1, sphere2, sphere3, bottomPlane, leftPlane];
+const allObjects = [
+  sphere1,
+  sphere2,
+  sphere3,
+  bottomPlane,
+  leftPlane,
+  // movableBox,
+];
+
+const movableObjects = allObjects.filter((obj) => !obj.fixed);
 
 function animate() {
   requestAnimationFrame(animate);
@@ -173,13 +193,13 @@ function animate() {
     }
   }
 
-  eulerStep(getGravityForce(sphere1), sphere1);
-  eulerStep(getGravityForce(sphere2), sphere2);
-  eulerStep(getGravityForce(sphere3), sphere3);
+  movableObjects.forEach((obj) => {
+    eulerStep(getGravityForce(obj), obj);
+  });
 
-  updatePosition(sphere1);
-  updatePosition(sphere2);
-  updatePosition(sphere3);
+  movableObjects.forEach((obj) => {
+    obj.updatePosition(obj);
+  });
 
   renderer.render(scene, camera);
   time += TIME_STEP;
