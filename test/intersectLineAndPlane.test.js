@@ -1,4 +1,4 @@
-import { intersectLineAndPlane } from "../src/library/collision";
+import { intersectLineAndPlane } from "../src/library/vector";
 
 import { expectVectorClose } from "./testHelpers";
 
