@@ -8,20 +8,9 @@ import { addVectors } from "../library/vector.js";
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xdbdbcc);
 
-const camera = new THREE.PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-);
-
-camera.translateY(1);
-camera.translateZ(3);
+const camera = setupCamera();
 
 console.log(camera.position);
-
-// Gravitational constant
-const G = 6.674 * 10 ** -11;
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -35,22 +24,7 @@ scene.add(light);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 10);
 scene.add(directionalLight);
 
-camera.position.z = 5;
-
 // functions
-
-function createGround(width = 1, height = 1, depth = 1, color = 0x0a0d4bff) {
-  const geometry = new THREE.BoxGeometry(width, height, depth);
-  const material = new THREE.MeshPhongMaterial({
-    color: color,
-  });
-  const cube = new THREE.Mesh(geometry, material);
-  scene.add(cube);
-  cube.position.y = -height / 2;
-  return {
-    cube: cube,
-  };
-}
 
 function getForce(obj1, obj2) {
   let u_ab0 = obj2.position[0] - obj1.position[0];
@@ -67,34 +41,7 @@ function getForce(obj1, obj2) {
   return [force_mag * u_ab0, force_mag * u_ab1, force_mag * u_ab2];
 }
 
-function createArrow(newDir, newOrigin) {
-  const dir = new THREE.Vector3(...newDir);
-  dir.normalize();
-  const origin = new THREE.Vector3(...newOrigin);
-  const length = 1;
-  const hex = 0x00635d;
-  const arrowHelper = new THREE.ArrowHelper(dir, origin, length, hex);
-  scene.add(arrowHelper);
-  return arrowHelper;
-}
-
-function updatePosition(obj) {
-  obj.sphere.position.x = obj.position[0];
-  obj.sphere.position.y = obj.position[1];
-  obj.sphere.position.z = obj.position[2];
-}
-
-function updateForceArrow(forceArrowObj, force, position) {
-  forceArrowObj.position.x = position[0];
-  forceArrowObj.position.y = position[1];
-  forceArrowObj.position.z = position[2];
-  forceArrowObj.setDirection(new THREE.Vector3(...force).normalize());
-  forceArrowObj.setLength(
-    Math.sqrt(force[0] ** 2 + force[1] ** 2 + force[2] ** 2) * 0.005
-  );
-}
-
-function eulerStep(force, obj, useGroundConstraint = false) {
+function eulerStepWithGround(force, obj, useGroundConstraint = false) {
   // this is the semi-implicit euler method
   // that's because we update position using
   // a future velocity measurement
@@ -160,20 +107,18 @@ function animate() {
 
   console.log(sphere2);
 
-  eulerStep(forceOnEarth, earth);
-  eulerStep(forceOnSphere2, sphere2, true);
+  eulerStepWithGround(forceOnEarth, earth);
+  eulerStepWithGround(forceOnSphere2, sphere2, true);
 
-  // updateForceArrow(forceArrow2, forceOnEarth, earth.position);
-  // updateForceArrow(forceArrow1, forceOnSphere2, sphere2.position);
-
-  updatePosition(earth);
-  updatePosition(sphere2);
+  earth.updatePosition(earth);
+  sphere2.updatePosition(sphere2);
 
   renderer.render(scene, camera);
   time += TIME_STEP;
 }
 
 import WebGL from "three/addons/capabilities/WebGL.js";
+import { setupCamera } from "../library/helpers.js";
 
 if (WebGL.isWebGLAvailable()) {
   // Initiate function or other initializations here
