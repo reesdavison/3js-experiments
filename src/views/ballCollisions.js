@@ -45,7 +45,7 @@ const sphere2 = createSphere(
   0.8
 );
 
-const normalArrow = createArrow([90, 90, 90], [90, 90, 90]);
+const normalArrow = createArrow([90, 90, 90], [90, 90, 90], scene);
 
 const TIME_STEP = 0.01;
 let time = 0;

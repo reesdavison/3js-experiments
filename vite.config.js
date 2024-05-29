@@ -18,8 +18,14 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, "src/index.html"),
-        multiBall: resolve(__dirname, "src/views/multiBall.html"),
-        multiBall2: resolve(__dirname, "src/views/multiBall2.html"),
+        // multiBall: resolve(__dirname, "src/views/multiBall.html"),
+        // multiBall2: resolve(__dirname, "src/views/multiBall2.html"),
+        ...Object.fromEntries(
+          sync(resolve(__dirname, "src/views", "*.html")).map((path) => [
+            path.split("/").at(-1).split(".html")[0],
+            path,
+          ])
+        ),
       },
       // input: {
       //   main: resolve(__dirname, "src/index.html"),

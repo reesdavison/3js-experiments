@@ -3,6 +3,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { createSphere } from "../library/sphere.js";
 import { addVectors } from "../library/vector.js";
+import { G } from "../library/constants.js";
 
 // 3js setup + camera + light
 const scene = new THREE.Scene();
