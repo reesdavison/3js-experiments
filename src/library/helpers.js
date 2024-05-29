@@ -45,3 +45,16 @@ export function updateArrow(arrowObj, direction, position) {
   arrowObj.setDirection(new THREE.Vector3(...direction).normalize());
   arrowObj.setLength(2);
 }
+
+/*
+Min and max are inclusive
+*/
+export function getRandomInt(min, max) {
+  const range = max - min;
+  return Math.floor(Math.random() * range + min);
+}
+
+export function getRandomFloat(min, max) {
+  const range = max - min;
+  return Math.random() * range + min;
+}
