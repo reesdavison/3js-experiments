@@ -7,7 +7,7 @@
   },
   "dependencies": {
     "three": "^0.164.1",
-    "vite": "^5.2.12"
+    "vite": "^5.2.10"
   },
   "devDependencies": {
     "glob": "^10.4.1",

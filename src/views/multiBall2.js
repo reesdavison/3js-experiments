@@ -15,6 +15,7 @@ import {
 } from "../library/helpers.js";
 import { eulerStep } from "../library/simulate.js";
 import { TIME_STEP } from "../library/constants.js";
+import { OctreeNode } from "../library/octree.js";
 
 // 3js setup + camera + light
 const scene = new THREE.Scene();
@@ -59,7 +60,7 @@ const leftPlane = createBox(
   [0, 1, 0],
   Math.PI / 2,
   0.2,
-  999999, // high mass to make immovable in collision resolution
+  10 ** 3, // 999999, // high mass to make immovable in collision resolution
   0x456e4e,
   true
 );
@@ -112,7 +113,7 @@ const leftPlane = createBox(
 
 const randomSpheres = [];
 
-const NBalls = 200;
+const NBalls = 500;
 
 for (let i = 0; i < NBalls; ++i) {
   randomSpheres.push(
@@ -135,29 +136,49 @@ const allObjects = [...randomSpheres, bottomPlane, leftPlane];
 
 const movableObjects = allObjects.filter((obj) => !obj.fixed);
 
-function resolveAllCollisions() {
+function resolveAllCollisionsOctree() {
+  const frameOctree = new OctreeNode(
+    { x: 0, y: 0, z: 0, size: 20 },
+    gjkIntersection,
+    0,
+    4
+  );
   for (let i = 0; i < allObjects.length; i++) {
-    for (let j = 0; j < allObjects.length; j++) {
-      if (i !== j) {
+    frameOctree.insert(allObjects[i]);
+  }
+  const { collisions, numChecks } = frameOctree.checkCollisions();
+  for (let i = 0; i < collisions.length; i++) {
+    resolveCollision(collisions[i]);
+  }
+  console.log("Num checks ", numChecks);
+}
+
+function resolveAllCollisions() {
+  // let numChecks = 0;
+  if (allObjects.length >= 2) {
+    for (let i = 1; i < allObjects.length; i++) {
+      for (let j = 0; j < i; j++) {
         const objI = allObjects[i];
         const objJ = allObjects[j];
         if (objI.fixed && objJ.fixed) {
           continue;
         }
         const collision = gjkIntersection(objI, objJ);
-        const { collide, normal: collideNormal } = collision;
+        // numChecks++;
+        const { collide } = collision;
         if (collide) {
-          resolveCollision(collision, objI, objJ);
+          resolveCollision(collision);
         }
       }
     }
   }
+  // console.log("NUM CHECKS ", numChecks);
 }
 
 function animate() {
   requestAnimationFrame(animate);
 
-  resolveAllCollisions();
+  resolveAllCollisionsOctree();
 
   movableObjects.forEach((obj) => {
     eulerStep(getGravityForce(obj), obj);

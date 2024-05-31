@@ -58,3 +58,43 @@ export function getRandomFloat(min, max) {
   const range = max - min;
   return Math.random() * range + min;
 }
+
+export function sum(array) {
+  if (typeof array[0] === "number") {
+    return array.reduce((partialSum, cur) => partialSum + cur, 0);
+  } else if (typeof array[0] === "boolean") {
+    return array.reduce(
+      (partialSum, cur) => (cur ? partialSum + 1 : partialSum),
+      0
+    );
+  }
+  throw new Error("Unexpected type of array");
+}
+
+/*
+Bit mask is just a javascript Number here, 
+but we're just treating it as bits.
+
+In case you're wondering:
+Javascript stores numbers as 64 bits floating point numbers, but all bitwise operations are performed on 32 bits binary numbers.
+Before a bitwise operation is performed, Javascript converts numbers to 32 bits signed integers.
+After the bitwise operation is performed, the result is converted back to 64 bits Javascript numbers.
+*/
+export function setBitMaskPos(bitmask, pos) {
+  return bitmask | (1 << pos);
+}
+
+export function testBitMaskPos(bitmask, pos) {
+  return (bitmask & (1 << pos)) !== 0;
+}
+
+/*
+point conversion functions
+*/
+export function arrayPointToXYZ(arrayPoint) {
+  return { x: arrayPoint[0], y: arrayPoint[1], z: arrayPoint[2] };
+}
+
+export function XYZPointToArray(xyzPointObject) {
+  return [xyzPointObject.x, xyzPointObject.y, xyzPointObject.z];
+}

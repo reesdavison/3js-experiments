@@ -176,6 +176,17 @@ export function createBox(
   plane.position.y = position[1];
   plane.position.z = position[2];
 
+  const size = Math.max(width, height, thickness);
+
+  function getBounds(obj) {
+    return {
+      x: obj.position[0],
+      y: obj.position[1],
+      z: obj.position[2],
+      size: size,
+    };
+  }
+
   return {
     plane,
     corners: getCuboidCorners(
@@ -194,5 +205,6 @@ export function createBox(
     updatePosition,
     getOuterPlaneNormals,
     getCornerIndicesForPlane,
+    getBounds,
   };
 }

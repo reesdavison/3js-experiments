@@ -8,7 +8,9 @@ import {
   multiplyConst,
   normaliseVec,
   intersectLineAndPlane,
+  squaredDistanceFromOrigin,
 } from "./vector";
+import { XYZPointToArray } from "./helpers";
 
 /*
 Major help with the below from
@@ -219,6 +221,22 @@ export function getSphereCuboidCollisionDetails(obj1, obj2) {
   };
 }
 
+/*
+Mostly used as a test function to help
+*/
+export function basicCollisionSphereTest(obj1, obj2) {
+  const b1 = obj1.getBounds(obj1);
+  const b2 = obj2.getBounds(obj2);
+  const distanceBetweenCentersSquared = squaredDistanceFromOrigin(
+    subtractVectors(XYZPointToArray(b1), XYZPointToArray(b2))
+  );
+  return {
+    collide: distanceBetweenCentersSquared <= (b1.size + b2.size) ** 2,
+    obj1,
+    obj2,
+  };
+}
+
 export function gjkIntersection(
   obj1,
   obj2,
@@ -262,6 +280,8 @@ export function gjkIntersection(
         normal,
         obj1Closest,
         obj2Closest,
+        obj1,
+        obj2,
       };
     }
 
@@ -341,8 +361,8 @@ export function resolveVelocity(collision, obj1, obj2) {
   obj2.velocity = v2_after;
 }
 
-export function resolveCollision(collision, obj1, obj2) {
-  const { collide, normal, obj1Closest, obj2Closest } = collision;
+export function resolveCollision(collision) {
+  const { collide, normal, obj1Closest, obj2Closest, obj1, obj2 } = collision;
   if (collide) {
     // first resolve positions, and update objects
     resolvePosition(collision, obj1, obj2);

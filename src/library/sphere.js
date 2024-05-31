@@ -39,6 +39,15 @@ export function createSphere(
     obj.sphere.position.z = obj.position[2];
   }
 
+  function getBounds(obj) {
+    return {
+      x: obj.position[0],
+      y: obj.position[1],
+      z: obj.position[2],
+      size: obj.radius,
+    };
+  }
+
   return {
     sphere: sphere,
     mass: mass,
@@ -49,5 +58,6 @@ export function createSphere(
     support: supportSphere,
     fixed,
     updatePosition,
+    getBounds,
   };
 }

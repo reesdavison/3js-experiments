@@ -123,12 +123,10 @@ const allObjects = [
 
 const movableObjects = allObjects.filter((obj) => !obj.fixed);
 
-function animate() {
-  requestAnimationFrame(animate);
-
-  for (let i = 0; i < allObjects.length; i++) {
-    for (let j = 0; j < allObjects.length; j++) {
-      if (i !== j) {
+function resolveAllCollisions() {
+  if (allObjects.length >= 2) {
+    for (let i = 1; i < allObjects.length; i++) {
+      for (let j = 0; j < i; j++) {
         const objI = allObjects[i];
         const objJ = allObjects[j];
         if (objI.fixed && objJ.fixed) {
@@ -138,11 +136,17 @@ function animate() {
         const { collide, normal: collideNormal } = collision;
         if (collide) {
           updateArrow(normalArrow, collideNormal, objI.position);
-          resolveCollision(collision, objI, objJ);
+          resolveCollision(collision);
         }
       }
     }
   }
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  resolveAllCollisions();
 
   movableObjects.forEach((obj) => {
     eulerStep(getGravityForce(obj), obj);

@@ -1,9 +1,11 @@
+import { gjkIntersection } from "../src/library/collision";
+import { supportSphere } from "../src/library/sphere";
 import {
-  supportSphere,
-  supportCuboid,
+  getCornerIndicesForPlane,
   getCuboidCorners,
-  gjkIntersection,
-} from "../src/library/collision";
+  getOuterPlaneNormals,
+  supportCuboid,
+} from "../src/library/box";
 
 import { expectVectorClose } from "./testHelpers";
 
@@ -22,6 +24,8 @@ describe("collisions between cuboid and sphere", () => {
       corners: getCuboidCorners(1, 1, 1, [xPosition, 0, 0], [1, 0, 0], 0),
       position: [xPosition, 0, 0],
       support: supportCuboid,
+      getOuterPlaneNormals,
+      getCornerIndicesForPlane,
     };
     const collision = gjkIntersection(sphere, cuboid);
     expect(collision.collide).toBeTruthy();

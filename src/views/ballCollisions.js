@@ -58,7 +58,7 @@ function animate() {
 
   if (collide) {
     updateArrow(normalArrow, collideNormal, sphere1.position);
-    resolveCollision(collision, sphere1, sphere2);
+    resolveCollision(collision);
   }
 
   eulerStep([0, 0, 0], sphere1);
