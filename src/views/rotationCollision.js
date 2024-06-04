@@ -78,7 +78,9 @@ const movableBox1 = createBox(
   boxLen,
   10 ** 3,
   0x446df6,
-  false
+  false,
+  1,
+  [0, 1, 0]
 );
 
 const movableBox2 = createBox(
@@ -92,7 +94,9 @@ const movableBox2 = createBox(
   boxLen,
   10 ** 3,
   0x446df6,
-  false
+  false,
+  1,
+  normaliseVec([1, 1, 0])
 );
 
 const movableBox3 = createBox(
@@ -106,7 +110,9 @@ const movableBox3 = createBox(
   boxLen,
   10 ** 3,
   0x446df6,
-  false
+  false,
+  2,
+  [0.5, 0, 0.5]
 );
 
 let time = 0;
@@ -186,6 +192,7 @@ function animate() {
 }
 
 import WebGL from "three/addons/capabilities/WebGL.js";
+import { normaliseVec } from "../library/vector.js";
 
 if (WebGL.isWebGLAvailable()) {
   // Initiate function or other initializations here

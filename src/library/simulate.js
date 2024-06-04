@@ -17,6 +17,10 @@ export function eulerStep(force, obj) {
   const pos1 = obj.position[1] + TIME_STEP * vel1;
   const pos2 = obj.position[2] + TIME_STEP * vel2;
 
+  const posRotationRadians =
+    obj.posRotationRadians + TIME_STEP * obj.angularVelocity;
+
   obj.position = [pos0, pos1, pos2];
   obj.velocity = [vel0, vel1, vel2];
+  obj.posRotationRadians = posRotationRadians;
 }

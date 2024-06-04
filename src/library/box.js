@@ -7,6 +7,8 @@ import {
   crossProduct,
   normaliseVec,
   dotProduct,
+  angleAxisToQuarternion,
+  hamiltonianProduct,
 } from "./vector";
 
 export function getCuboidCorners(
@@ -149,12 +151,14 @@ export function createBox(
   height = 1,
   position = [0, 0, 0],
   velocity = [0, 0, 0],
-  rotationAxis = [1, 0, 0],
-  rotationRadians = 0,
+  initPosRotationAxis = [1, 0, 0],
+  initPosRotationRadians = 0,
   thickness = 0.1,
   mass = 1,
   color = 0xb7c9bc,
-  fixed = false
+  fixed = false,
+  angularVelocity = 1,
+  rotationAxis = normaliseVec([1, 1, 1])
 ) {
   const geometry = new THREE.BoxGeometry(width, height, thickness);
   const material = new THREE.MeshPhongMaterial({
@@ -163,8 +167,8 @@ export function createBox(
   const plane = new THREE.Mesh(geometry, material);
   scene.add(plane);
   plane.setRotationFromAxisAngle(
-    new THREE.Vector3(...rotationAxis),
-    rotationRadians
+    new THREE.Vector3(...initPosRotationAxis),
+    initPosRotationRadians
   );
   plane.position.x = position[0];
   plane.position.y = position[1];
@@ -181,7 +185,7 @@ export function createBox(
     };
   }
 
-  function updateCuboidCorners(obj) {
+  function updateCuboidCorners(obj, rotationAxis, rotationRadians) {
     return getCuboidCorners(
       width,
       height,
@@ -196,6 +200,26 @@ export function createBox(
     obj.plane.position.x = obj.position[0];
     obj.plane.position.y = obj.position[1];
     obj.plane.position.z = obj.position[2];
+
+    const initQuaternion = angleAxisToQuarternion(
+      initPosRotationAxis,
+      initPosRotationRadians
+    );
+    const rotationQuaternion = angleAxisToQuarternion(
+      obj.rotationAxis,
+      obj.posRotationRadians
+    );
+    const totalQuaternion = hamiltonianProduct(
+      initQuaternion,
+      rotationQuaternion
+    );
+
+    const theta = Math.acos(totalQuaternion[0]) * 2;
+    const ax = totalQuaternion[1] / Math.sin(theta / 2);
+    const ay = totalQuaternion[2] / Math.sin(theta / 2);
+    const az = totalQuaternion[3] / Math.sin(theta / 2);
+
+    obj.plane.setRotationFromAxisAngle(new THREE.Vector3(ax, ay, az), theta);
     obj.corners = updateCuboidCorners(obj);
   }
 
@@ -207,8 +231,8 @@ export function createBox(
       height,
       thickness,
       position,
-      rotationAxis,
-      rotationRadians
+      initPosRotationAxis,
+      initPosRotationRadians
     ),
     support: supportCuboid,
     position,
@@ -219,5 +243,8 @@ export function createBox(
     getOuterPlaneNormals,
     getCornerIndicesForPlane,
     getBounds,
+    angularVelocity,
+    rotationAxis,
+    posRotationRadians: initPosRotationRadians,
   };
 }
