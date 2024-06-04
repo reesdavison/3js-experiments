@@ -112,12 +112,6 @@ export function getCornerIndicesForPlane(plane) {
   }
 }
 
-function updatePosition(obj) {
-  obj.plane.position.x = obj.position[0];
-  obj.plane.position.y = obj.position[1];
-  obj.plane.position.z = obj.position[2];
-}
-
 export function supportCuboid(obj, direction) {
   return supportCuboidTopK(obj, direction, 1)[0];
 }
@@ -187,7 +181,26 @@ export function createBox(
     };
   }
 
+  function updateCuboidCorners(obj) {
+    return getCuboidCorners(
+      width,
+      height,
+      thickness,
+      obj.position,
+      rotationAxis,
+      rotationRadians
+    );
+  }
+
+  function updatePosition(obj) {
+    obj.plane.position.x = obj.position[0];
+    obj.plane.position.y = obj.position[1];
+    obj.plane.position.z = obj.position[2];
+    obj.corners = updateCuboidCorners(obj);
+  }
+
   return {
+    shape: "box",
     plane,
     corners: getCuboidCorners(
       width,

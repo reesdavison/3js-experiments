@@ -174,6 +174,62 @@ export function getSphereCollisionDetails(obj1, obj2) {
   return { normal, obj1Closest, obj2Closest };
 }
 
+function getClosestPointCuboid(obj1, outDirection, obj2) {
+  const obj1OuterNormals = obj1.getOuterPlaneNormals(obj1.corners);
+
+  const sortedDotPlanes = Object.entries(obj1OuterNormals)
+    .map(([key, norm], index) => {
+      return {
+        dp: dotProduct(outDirection, norm),
+        index,
+        planeDirectionStr: key,
+        norm: norm,
+      };
+    })
+    .toSorted((a, b) => b.dp - a.dp); // descending
+
+  const obj1norm = normaliseVec(sortedDotPlanes[0].norm);
+  const planePointIndex = obj1.getCornerIndicesForPlane(
+    sortedDotPlanes[0].planeDirectionStr
+  )[0];
+  const planePoint = obj1.corners[planePointIndex];
+
+  const obj1Closest = intersectLineAndPlane(
+    obj2.position,
+    planePoint,
+    outDirection,
+    obj1norm
+  );
+
+  return { closest: obj1Closest, norm: obj1norm };
+}
+
+export function getCuboidCuboidCollisionDetails(obj1, obj2) {
+  const obj1ToObj2Direction = normaliseVec(
+    subtractVectors(obj2.position, obj1.position)
+  );
+  const { closest: obj1Closest, norm: obj1Norm } = getClosestPointCuboid(
+    obj1,
+    obj1ToObj2Direction,
+    obj2
+  );
+  const { closest: obj2Closest, norm: obj2Norm } = getClosestPointCuboid(
+    obj2,
+    invertVector(obj1ToObj2Direction),
+    obj1
+  );
+
+  return {
+    normal: obj1Norm,
+    obj1Closest: obj1Closest,
+    obj2Closest: obj2Closest,
+  };
+}
+
+/*
+We make the assumption in this code that collision occurs at a plane
+Not on lines or corners
+*/
 export function getSphereCuboidCollisionDetails(obj1, obj2) {
   const sphere = obj1.radius ? obj1 : obj2;
   const cuboid = obj1.corners ? obj1 : obj2;
@@ -251,7 +307,7 @@ export function gjkIntersection(
   let containsOrigin = false;
 
   let count = 0;
-  while (count < 10) {
+  while (count < 15) {
     A = subtractVectors(
       obj1.support(obj1, nextDirection),
       obj2.support(obj2, invertVector(nextDirection))
@@ -264,13 +320,18 @@ export function gjkIntersection(
     ({ nextDirection, containsOrigin } = nearestSimplex(simplex));
     if (containsOrigin) {
       let obj1Closest, obj2Closest, normal;
-      if (obj1.sphere && obj2.sphere) {
+      if (obj1.shape === "sphere" && obj2.shape === "sphere") {
         ({ normal, obj1Closest, obj2Closest } = getSphereCollisionDetails(
           obj1,
           obj2
         ));
-      } else {
+      } else if (obj1.shape === "sphere" || obj2.shape === "sphere") {
         ({ normal, obj1Closest, obj2Closest } = getSphereCuboidCollisionDetails(
+          obj1,
+          obj2
+        ));
+      } else {
+        ({ normal, obj1Closest, obj2Closest } = getCuboidCuboidCollisionDetails(
           obj1,
           obj2
         ));
@@ -309,8 +370,12 @@ export function resolvePosition(collision, obj1, obj2) {
   const d1 = d * obj1Frac;
   const d2 = d * obj2Frac;
 
-  obj1.position = subtractVectors(obj1.position, multiplyConst(normal, d1));
-  obj2.position = addVectors(obj2.position, multiplyConst(normal, d2));
+  if (!obj1.fixed) {
+    obj1.position = subtractVectors(obj1.position, multiplyConst(normal, d1));
+  }
+  if (!obj2.fixed) {
+    obj2.position = addVectors(obj2.position, multiplyConst(normal, d2));
+  }
 }
 
 export function resolveVelocity(collision, obj1, obj2) {
@@ -352,9 +417,30 @@ export function resolveVelocity(collision, obj1, obj2) {
       dotProduct(subtractVectors(obj1.velocity, obj2.velocity), normal)
   );
 
-  const v1_diff = multiplyConst(normal, impulse / obj1.mass);
+  // const mag_v1_before = magnitude(obj1.velocity);
+  // const mag_v1_after = magnitude(v1_after);
+  // const mag_v2_before = magnitude(obj2.velocity);
+  // const mag_v2_after = magnitude(v2_after);
+  // console.log(
+  //   `V1 before:${mag_v1_before},after:${mag_v1_after}, V2 before:${mag_v2_before},after:${mag_v2_after}`
+  // );
+
+  let v1_diff, v2_diff;
+  if (obj1.fixed && obj2.fixed) {
+    v1_diff = [0, 0, 0];
+    v2_diff = [0, 0, 0];
+  } else if (obj1.fixed) {
+    v1_diff = [0, 0, 0];
+    v2_diff = multiplyConst(normal, (impulse * 2) / obj2.mass);
+  } else if (obj2.fixed) {
+    v1_diff = multiplyConst(normal, (impulse * 2) / obj2.mass);
+    v2_diff = [0, 0, 0];
+  } else {
+    v1_diff = multiplyConst(normal, impulse / obj1.mass);
+    v2_diff = multiplyConst(normal, impulse / obj2.mass);
+  }
+
   const v1_after = addVectors(obj1.velocity, v1_diff);
-  const v2_diff = multiplyConst(normal, impulse / obj2.mass);
   const v2_after = subtractVectors(obj2.velocity, v2_diff);
 
   obj1.velocity = v1_after;

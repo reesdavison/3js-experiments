@@ -1,0 +1,12 @@
+body { 
+    margin: 0; 
+}
+.back-button {
+  position: absolute;
+  margin-left: 1em;
+}
+.refresh-button {
+  position: absolute;
+  right: 1em;
+  margin-top: 1em;
+}

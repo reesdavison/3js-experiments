@@ -49,6 +49,7 @@ export function createSphere(
   }
 
   return {
+    shape: "sphere",
     sphere: sphere,
     mass: mass,
     position: initPosition,

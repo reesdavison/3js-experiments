@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 describe("collisions between cuboid and sphere", () => {
   it("works for a simple case on x axis", () => {
     const sphere = {
+      shape: "sphere",
       radius: 1,
       position: [0, 0, 0],
       support: supportSphere,
@@ -21,6 +22,7 @@ describe("collisions between cuboid and sphere", () => {
 
     const xPosition = 1.45;
     const cuboid = {
+      shape: "box",
       corners: getCuboidCorners(1, 1, 1, [xPosition, 0, 0], [1, 0, 0], 0),
       position: [xPosition, 0, 0],
       support: supportCuboid,
@@ -34,6 +36,7 @@ describe("collisions between cuboid and sphere", () => {
 
   it("doesnt collide for a simple case on x axis", () => {
     const sphere = {
+      shape: "sphere",
       radius: 1,
       position: [0, 0, 0],
       support: supportSphere,
@@ -41,6 +44,7 @@ describe("collisions between cuboid and sphere", () => {
 
     const xPosition = 1.55;
     const cuboid = {
+      shape: "box",
       corners: getCuboidCorners(1, 1, 1, [xPosition, 0, 0], [1, 0, 0], 0),
       position: [xPosition, 0, 0],
       support: supportCuboid,

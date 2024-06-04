@@ -1,4 +1,5 @@
 import { TIME_STEP } from "./constants";
+import { addVectors, multiplyConst } from "./vector";
 
 export function eulerStep(force, obj) {
   // this is the semi-implicit euler method

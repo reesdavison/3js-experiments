@@ -46,7 +46,7 @@ const bottomPlane = createBox(
   [1, 0, 0],
   Math.PI / 2,
   0.2,
-  999999, // high mass to make immovable in collision resolution
+  10 ** 3, // high mass to make immovable in collision resolution
   0x456e4e,
   true
 );
@@ -65,76 +65,63 @@ const leftPlane = createBox(
   true
 );
 
-// const movableBox = createBox(
-//   scene,
-//   0.5,
-//   0.5,
-//   [2, 4, 0],
-//   [-1, 0, 0],
-//   [0, 1, 0],
-//   Math.PI / 2,
-//   0.5,
-//   10 ** 3,
-//   0x446df6,
-//   false
-// );
+const boxLen = 0.75;
 
-// const sphere1 = createSphere(
-//   scene,
-//   [-2, 1.5, 0],
-//   [2, 0, 0],
-//   10 ** 3, // mass
-//   0x446df6,
-//   0.4,
-//   0.8,
-//   false
-// );
-// const sphere2 = createSphere(
-//   scene,
-//   [2, 1.2, 0],
-//   [-2, 0, 0],
-//   10 ** 3, // mass
-//   0x446df6,
-//   0.4,
-//   0.8,
-//   false
-// );
+const movableBox1 = createBox(
+  scene,
+  boxLen,
+  boxLen,
+  [-1, 1.5, 0],
+  [2, 0, 0],
+  [0, 1, 0],
+  Math.PI / 2,
+  boxLen,
+  10 ** 3,
+  0x446df6,
+  false
+);
 
-// const sphere3 = createSphere(
-//   scene,
-//   [-2, 2, 0],
-//   [1, -1, 0],
-//   10 ** 3,
-//   0x446df6,
-//   0.4,
-//   0.8,
-//   false
-// );
+const movableBox2 = createBox(
+  scene,
+  boxLen,
+  boxLen,
+  [2, 1.2, 0],
+  [-2, 0, 0],
+  [0, 1, 0],
+  Math.PI / 2,
+  boxLen,
+  10 ** 3,
+  0x446df6,
+  false
+);
 
-const randomSpheres = [];
-
-const NBalls = 500;
-
-for (let i = 0; i < NBalls; ++i) {
-  randomSpheres.push(
-    createSphere(
-      scene,
-      [getRandomInt(-5, 5), getRandomInt(2, 7), getRandomInt(-5, 5)],
-      [getRandomFloat(-3, 3), getRandomFloat(-3, 3), 0],
-      10 ** 3,
-      0x446df6,
-      0.2,
-      0.8,
-      false
-    )
-  );
-}
+const movableBox3 = createBox(
+  scene,
+  boxLen,
+  boxLen,
+  [1, 2, 0],
+  [1, -1, 0],
+  [0, 1, 0],
+  Math.PI / 2,
+  boxLen,
+  10 ** 3,
+  0x446df6,
+  false
+);
 
 let time = 0;
 
-const allObjects = [...randomSpheres, bottomPlane, leftPlane];
+const allObjects = [
+  movableBox1,
+  movableBox2,
+  movableBox3,
+  bottomPlane,
+  leftPlane,
+];
 
 const movableObjects = allObjects.filter((obj) => !obj.fixed);
+
+const arrowObj = createArrow([0, 0, 0], [0, 0, 0], scene);
 
 function resolveAllCollisionsOctree() {
   const frameOctree = new OctreeNode(
@@ -148,7 +135,10 @@ function resolveAllCollisionsOctree() {
   }
   const { collisions, numChecks } = frameOctree.checkCollisions();
   for (let i = 0; i < collisions.length; i++) {
+    console.log("collision");
     resolveCollision(collisions[i]);
+    const col = collisions[i];
+    updateArrow(arrowObj, col.normal, col.obj1.position);
   }
   // console.log("Num checks ", numChecks);
 }
@@ -183,6 +173,9 @@ function animate() {
   movableObjects.forEach((obj) => {
     eulerStep(getGravityForce(obj), obj);
   });
+  // movableObjects.forEach((obj) => {
+  //   eulerStep([0, 0, 0], obj);
+  // });
 
   movableObjects.forEach((obj) => {
     obj.updatePosition(obj);
