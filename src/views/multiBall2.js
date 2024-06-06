@@ -2,8 +2,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { gjkIntersection, resolveCollision } from "../library/collision.js";
-import { createBox } from "../library/box.js";
-import { createSphere } from "../library/sphere.js";
+import { createTHREEBox } from "../library/box.js";
+import { createTHREESphere } from "../library/sphere.js";
 import {
   createHelperGrid,
   getGravityForce,
@@ -37,31 +37,31 @@ scene.add(directionalLight);
 
 createHelperGrid(scene);
 
-const bottomPlane = createBox(
+const bottomPlane = createTHREEBox(
   scene,
+  0x456e4e,
   10,
   10,
+  0.2,
   [0, 0, 0],
   [0, 0, 0],
   [1, 0, 0],
   Math.PI / 2,
-  0.2,
   999999, // high mass to make immovable in collision resolution
-  0x456e4e,
   true
 );
 
-const leftPlane = createBox(
+const leftPlane = createTHREEBox(
   scene,
+  0x456e4e,
   5,
   5,
+  0.2,
   [-2.5, 2.5, 0],
   [0, 0, 0],
   [0, 1, 0],
   Math.PI / 2,
-  0.2,
   10 ** 3, // 999999, // high mass to make immovable in collision resolution
-  0x456e4e,
   true
 );
 
@@ -117,12 +117,12 @@ const NBalls = 500;
 
 for (let i = 0; i < NBalls; ++i) {
   randomSpheres.push(
-    createSphere(
+    createTHREESphere(
       scene,
+      0x446df6,
       [getRandomInt(-5, 5), getRandomInt(2, 7), getRandomInt(-5, 5)],
       [getRandomFloat(-3, 3), getRandomFloat(-3, 3), 0],
       10 ** 3,
-      0x446df6,
       0.2,
       0.8,
       false
@@ -178,14 +178,19 @@ function resolveAllCollisions() {
 function animate() {
   requestAnimationFrame(animate);
 
+  // only other external forces
+  movableObjects.forEach((obj) => {
+    obj.centerForce = getGravityForce(obj);
+  });
+
   resolveAllCollisionsOctree();
 
   movableObjects.forEach((obj) => {
-    eulerStep(getGravityForce(obj), obj);
+    eulerStep(obj);
   });
 
   movableObjects.forEach((obj) => {
-    obj.updatePosition(obj);
+    obj.updateTHREE(obj);
   });
 
   renderer.render(scene, camera);

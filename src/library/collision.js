@@ -9,8 +9,12 @@ import {
   normaliseVec,
   intersectLineAndPlane,
   squaredDistanceFromOrigin,
+  multiplyVecMatrixVec,
+  multiplyMatrixVec,
+  multiplyMatrix,
+  invertMatrix,
 } from "./vector";
-import { XYZPointToArray } from "./helpers";
+import { XYZPointToArray, getGravityForce } from "./helpers";
 
 /*
 Major help with the below from
@@ -45,7 +49,7 @@ export function sameSideLine(v1, v2, p) {
   return (p[0] - v2[0]) * (v1[1] - v2[1]) - (v1[0] - v2[0]) * (v0[1] - v2[1]);
 }
 
-export function nearestSimplexFromLine(simplex) {
+export function nearestSimplexFromLine(simplex, obj1Points, obj2Points) {
   if (simplex.length != 2) {
     throw new Error("Expected simplex to be a line.");
   }
@@ -59,7 +63,11 @@ export function nearestSimplexFromLine(simplex) {
   // line simplex passes through origin.
   if (magnitude(ao) + magnitude(b) - magnitude(ab) <= 0.01) {
     // simplex.shift();
-    return { nextDirection: ab, containsOrigin: true };
+    return {
+      nextDirection: ab,
+      containsOrigin: true,
+      contactPoint: addVectors(obj1Points[1], ao), // TODO check this
+    };
   }
 
   if (sameDirection(ab, ao)) {
@@ -71,11 +79,44 @@ export function nearestSimplexFromLine(simplex) {
   } else {
     // remove 'b' from the simplex, origin is closer to 'a' than line 'ab'
     simplex.shift();
+    obj1Points.shift();
+    obj2Points.shift();
     return { nextDirection: ao, containsOrigin: false };
   }
 }
 
-export function nearestSimplexFromTriangle(simplex) {
+export function getBarycentricWeightsOfOriginFromSimplex(simplex) {
+  if (simplex.length !== 4) {
+    throw new Error("expected tetrahedron");
+  }
+
+  const [[x1, y1, z1], [x2, y2, z2], [x3, y3, z3], [x4, y4, z4]] = simplex;
+  const T = [
+    [x1 - x4, x2 - x4, x3 - x4],
+    [y1 - y4, y2 - y4, y3 - y4],
+    [z1 - z4, z2 - z4, z3 - z4],
+  ];
+  const invT = invertMatrix(T);
+  const [b1, b2, b3] = multiplyMatrixVec(
+    invT,
+    subtractVectors([0, 0, 0], [x4, y4, z4])
+  );
+  const b4 = 1 - b1 - b2 - b3;
+  return [b1, b2, b3, b4];
+}
+
+export function getPointFromBarycentricWeights(baryWeights, points) {
+  const [b1, b2, b3, b4] = baryWeights;
+  const result = addVectors(
+    multiplyConst(points[0], b1),
+    multiplyConst(points[1], b2),
+    multiplyConst(points[2], b3),
+    multiplyConst(points[3], b4)
+  );
+  return result;
+}
+
+export function nearestSimplexFromTriangle(simplex, obj1Points, obj2Points) {
   if (simplex.length != 3) {
     throw new Error("Expected simplex to be a triangle.");
   }
@@ -83,6 +124,9 @@ export function nearestSimplexFromTriangle(simplex) {
   const c = simplex.at(0);
   const b = simplex.at(1);
   const a = simplex.at(2);
+
+  const point1B = obj1Points.at(1);
+  const point2B = obj2Points.at(1);
 
   const ab = subtractVectors(b, a);
   const ac = subtractVectors(c, a);
@@ -93,15 +137,23 @@ export function nearestSimplexFromTriangle(simplex) {
   if (sameDirection(crossProduct(abc, ac), ao)) {
     if (sameDirection(ac, ao)) {
       simplex.splice(1, 1); // remove b from the simplex
+      obj1Points.splice(1, 1);
+      obj2Points.splice(1, 1);
       return crossProduct(crossProduct(ac, ao), ac);
     } else {
       if (sameDirection(ab, ao)) {
         simplex.splice(0, 1); // remove c from the simplex
+        obj1Points.splice(0, 1);
+        obj2Points.splice(0, 1);
         return crossProduct(crossProduct(ab, ao), ab);
       } else {
         // leave only a in the simplex
         simplex.shift();
         simplex.shift();
+        obj1Points.shift();
+        obj1Points.shift();
+        obj2Points.shift();
+        obj2Points.shift();
         return ao;
       }
     }
@@ -109,11 +161,17 @@ export function nearestSimplexFromTriangle(simplex) {
     if (sameDirection(crossProduct(ab, abc), ao)) {
       if (sameDirection(ab, ao)) {
         simplex.splice(0, 1); // remove c from the simplex
+        obj1Points.splice(0, 1);
+        obj2Points.splice(0, 1);
         return crossProduct(crossProduct(ab, ao), ab);
       } else {
         // leave only a in the simplex
         simplex.shift();
         simplex.shift();
+        obj1Points.shift();
+        obj1Points.shift();
+        obj2Points.shift();
+        obj2Points.shift();
         return ao;
       }
     } else {
@@ -123,19 +181,28 @@ export function nearestSimplexFromTriangle(simplex) {
         // permute the triangle abc->acb
         simplex.splice(1, 1);
         simplex.push(b);
+        obj1Points.splice(1, 1);
+        obj1Points.push(point1B);
+        obj2Points.splice(1, 1);
+        obj2Points.push(point2B);
         return invertVector(abc);
       }
     }
   }
 }
 
-export function nearestSimplex(simplex) {
+export function nearestSimplex(simplex, obj1Points, obj2Points) {
   const origin = [0, 0, 0];
   let containsOrigin = false;
   let nextDirection;
+  let contactPoint;
 
   if (simplex.length == 2) {
-    ({ nextDirection, containsOrigin } = nearestSimplexFromLine(simplex));
+    ({ nextDirection, containsOrigin, contactPoint } = nearestSimplexFromLine(
+      simplex,
+      obj1Points,
+      obj2Points
+    ));
   } else if (simplex.length == 3 || simplex.length == 4) {
     if (simplex.length == 4) {
       containsOrigin = pointInTetrahedron(
@@ -146,10 +213,36 @@ export function nearestSimplex(simplex) {
         origin
       );
       // remove last added point furthest away from origin
+      if (containsOrigin) {
+        const baryWeights = getBarycentricWeightsOfOriginFromSimplex(simplex);
+        const obj1Closest = getPointFromBarycentricWeights(
+          baryWeights,
+          obj1Points
+        );
+        const obj2Closest = getPointFromBarycentricWeights(
+          baryWeights,
+          obj2Points
+        );
+        if (magnitude(subtractVectors(obj1Closest, obj2Closest)) > 0.1) {
+          console.log("Contact points should be the same");
+        }
+        // console.log("Simplex", simplex);
+        // console.log("bary weights", baryWeights);
+        // console.log("obj1Points", obj1Points);
+        // console.log("obj2Points", obj2Points);
+        // console.log("closest", obj1Closest, obj2Closest);
+        return {
+          contactPoint: obj1Closest,
+          simplex,
+          containsOrigin,
+        };
+      }
       simplex.shift();
+      obj1Points.shift();
+      obj2Points.shift();
     }
 
-    nextDirection = nearestSimplexFromTriangle(simplex);
+    nextDirection = nearestSimplexFromTriangle(simplex, obj1Points, obj2Points);
   } else {
     throw new Error(
       `simplex musty be of size 2, 3 or 4 but has size ${simplex.length}, ${simplex}`
@@ -160,6 +253,7 @@ export function nearestSimplex(simplex) {
     simplex,
     nextDirection: normaliseVec(nextDirection),
     containsOrigin,
+    contactPoint,
   };
 }
 
@@ -174,10 +268,12 @@ export function getSphereCollisionDetails(obj1, obj2) {
   return { normal, obj1Closest, obj2Closest };
 }
 
-function getClosestPointCuboid(obj1, outDirection, obj2) {
-  const obj1OuterNormals = obj1.getOuterPlaneNormals(obj1.corners);
+function getClosestPointCuboid(obj, contactPoint) {
+  const objOuterNormals = obj.getOuterPlaneNormals(obj);
 
-  const sortedDotPlanes = Object.entries(obj1OuterNormals)
+  const outDirection = subtractVectors(contactPoint, obj.position);
+
+  const sortedDotPlanes = Object.entries(objOuterNormals)
     .map(([key, norm], index) => {
       return {
         dp: dotProduct(outDirection, norm),
@@ -188,41 +284,46 @@ function getClosestPointCuboid(obj1, outDirection, obj2) {
     })
     .toSorted((a, b) => b.dp - a.dp); // descending
 
-  const obj1norm = normaliseVec(sortedDotPlanes[0].norm);
-  const planePointIndex = obj1.getCornerIndicesForPlane(
+  const norm = normaliseVec(sortedDotPlanes[0].norm);
+  const planePointIndex = obj.getCornerIndicesForPlane(
     sortedDotPlanes[0].planeDirectionStr
   )[0];
-  const planePoint = obj1.corners[planePointIndex];
+  const corners = obj.getCuboidCorners(obj);
+  const planePoint = corners[planePointIndex];
 
-  const obj1Closest = intersectLineAndPlane(
-    obj2.position,
+  const closest = intersectLineAndPlane(
+    contactPoint,
     planePoint,
     outDirection,
-    obj1norm
+    norm
   );
 
-  return { closest: obj1Closest, norm: obj1norm };
+  // const contactArm = subtractVectors(obj1Closest, obj1.position);
+
+  return { norm, closest };
 }
 
-export function getCuboidCuboidCollisionDetails(obj1, obj2) {
-  const obj1ToObj2Direction = normaliseVec(
-    subtractVectors(obj2.position, obj1.position)
-  );
-  const { closest: obj1Closest, norm: obj1Norm } = getClosestPointCuboid(
-    obj1,
-    obj1ToObj2Direction,
-    obj2
-  );
-  const { closest: obj2Closest, norm: obj2Norm } = getClosestPointCuboid(
-    obj2,
-    invertVector(obj1ToObj2Direction),
-    obj1
-  );
+export function getCuboidCuboidCollisionDetails(obj1, obj2, contactPoint) {
+  // const obj1ToObj2Direction = normaliseVec(
+  //   subtractVectors(obj2.position, obj1.position)
+  // );
+  const {
+    closest: obj1Closest,
+    norm: obj1Norm,
+    // contactArm: obj1ContactArm,
+  } = getClosestPointCuboid(obj1, contactPoint);
+  const {
+    closest: obj2Closest,
+    norm: obj2Norm,
+    // contactArm: obj2ContactArm,
+  } = getClosestPointCuboid(obj2, contactPoint);
 
   return {
     normal: obj1Norm,
-    obj1Closest: obj1Closest,
-    obj2Closest: obj2Closest,
+    obj1Norm, //multiplyConst(addVectors(obj1Norm, invertVector(obj2Norm)), 0.5),
+    obj2Norm,
+    obj1Closest,
+    obj2Closest,
   };
 }
 
@@ -231,8 +332,8 @@ We make the assumption in this code that collision occurs at a plane
 Not on lines or corners
 */
 export function getSphereCuboidCollisionDetails(obj1, obj2) {
-  const sphere = obj1.radius ? obj1 : obj2;
-  const cuboid = obj1.corners ? obj1 : obj2;
+  const sphere = obj1.shape === "sphere" ? obj1 : obj2;
+  const cuboid = obj1.shape === "box" ? obj1 : obj2;
 
   const obj1IsCuboid = obj1 === cuboid;
 
@@ -241,7 +342,7 @@ export function getSphereCuboidCollisionDetails(obj1, obj2) {
     cuboid.position
   );
 
-  const outerNormals = cuboid.getOuterPlaneNormals(cuboid.corners);
+  const outerNormals = cuboid.getOuterPlaneNormals(cuboid);
 
   const sortedDotPlanes = Object.entries(outerNormals)
     .map(([key, norm], index) => {
@@ -258,7 +359,8 @@ export function getSphereCuboidCollisionDetails(obj1, obj2) {
   const planePointIndex = cuboid.getCornerIndicesForPlane(
     sortedDotPlanes[0].planeDirectionStr
   )[0];
-  const planePoint = cuboid.corners[planePointIndex];
+  const corners = cuboid.getCuboidCorners(cuboid);
+  const planePoint = corners[planePointIndex];
 
   const sphereDirection = invertVector(moreAccurateNorm);
 
@@ -298,28 +400,44 @@ export function gjkIntersection(
   obj2,
   initDirection = [0.57735, 0.57735, 0.57735]
 ) {
-  let A = subtractVectors(
-    obj1.support(obj1, initDirection),
-    obj2.support(obj2, invertVector(initDirection))
-  );
+  let p1 = obj1.support(obj1, initDirection);
+  let p2 = obj2.support(obj2, invertVector(initDirection));
+  let A = subtractVectors(p1, p2);
   const simplex = [A];
+  const obj1Points = [p1];
+  const obj2Points = [p2];
+
   let nextDirection = subtractVectors([0, 0, 0], A);
   let containsOrigin = false;
+  let contactPoint;
+  let obj1Closest;
+  let obj2Closest;
+  let normal;
+  let obj1Norm, obj2Norm;
 
   let count = 0;
   while (count < 15) {
-    A = subtractVectors(
-      obj1.support(obj1, nextDirection),
-      obj2.support(obj2, invertVector(nextDirection))
-    );
+    p1 = obj1.support(obj1, nextDirection);
+    p2 = obj2.support(obj2, invertVector(nextDirection));
+    A = subtractVectors(p1, p2);
 
     if (dotProduct(A, nextDirection) < 0) {
       return { collide: false };
     }
+    obj1Points.push(p1);
+    obj2Points.push(p2);
     simplex.push(A);
-    ({ nextDirection, containsOrigin } = nearestSimplex(simplex));
+    ({ nextDirection, containsOrigin, contactPoint } = nearestSimplex(
+      simplex,
+      obj1Points,
+      obj2Points
+    ));
     if (containsOrigin) {
-      let obj1Closest, obj2Closest, normal;
+      // const normal = normaliseVec(subtractVectors(obj2Closest, obj1Closest));
+      // console.log("normal")
+      const obj1ContactArm = subtractVectors(contactPoint, obj1.position);
+      const obj2ContactArm = subtractVectors(contactPoint, obj2.position);
+
       if (obj1.shape === "sphere" && obj2.shape === "sphere") {
         ({ normal, obj1Closest, obj2Closest } = getSphereCollisionDetails(
           obj1,
@@ -331,11 +449,10 @@ export function gjkIntersection(
           obj2
         ));
       } else {
-        ({ normal, obj1Closest, obj2Closest } = getCuboidCuboidCollisionDetails(
-          obj1,
-          obj2
-        ));
+        ({ obj1Norm, obj2Norm, obj1Closest, obj2Closest, normal } =
+          getCuboidCuboidCollisionDetails(obj1, obj2, contactPoint));
       }
+
       return {
         collide: true,
         normal,
@@ -343,6 +460,10 @@ export function gjkIntersection(
         obj2Closest,
         obj1,
         obj2,
+        obj1ContactArm,
+        obj2ContactArm,
+        obj1Norm,
+        obj2Norm,
       };
     }
 
@@ -351,7 +472,7 @@ export function gjkIntersection(
   return { collide: false };
 }
 
-export function resolvePosition(collision, obj1, obj2) {
+export function resolvePosition(collision) {
   /*
   We resolve using inverse mass weighting
   where d = d1+d2 where d is the distance between the closest 
@@ -362,7 +483,8 @@ export function resolvePosition(collision, obj1, obj2) {
 
   Need to take care of m1, m2 labels
   */
-  const { normal, obj1Closest, obj2Closest } = collision;
+  const { normal, obj1, obj2, obj1Closest, obj2Closest } = collision;
+
   const d = magnitude(subtractVectors(obj1Closest, obj2Closest));
   const totalMass = obj1.mass + obj2.mass;
   const obj1Frac = obj2.mass / totalMass;
@@ -378,7 +500,7 @@ export function resolvePosition(collision, obj1, obj2) {
   }
 }
 
-export function resolveVelocity(collision, obj1, obj2) {
+export function resolveVelocity(collision) {
   /*
     if we ignore rotation in the current equations
 
@@ -407,10 +529,11 @@ export function resolveVelocity(collision, obj1, obj2) {
     impulse = 1/((1/m1) + (1/m2)) * -(Cr + 1) (v1_before - v2_before).v_collision_norm
 
     1/((1/m1) + (1/m2)) == m1m2 / m1 + m2
+
     */
-  const { normal } = collision;
+  const { normal, obj1, obj2 } = collision;
   const mass_term = (obj1.mass * obj2.mass) / (obj1.mass + obj2.mass);
-  const Cr = 1; // (for now)
+  const Cr = 1.0; // (for now)
   const impulse = -Math.abs(
     mass_term *
       -(Cr + 1) *
@@ -425,18 +548,12 @@ export function resolveVelocity(collision, obj1, obj2) {
   //   `V1 before:${mag_v1_before},after:${mag_v1_after}, V2 before:${mag_v2_before},after:${mag_v2_after}`
   // );
 
-  let v1_diff, v2_diff;
-  if (obj1.fixed && obj2.fixed) {
-    v1_diff = [0, 0, 0];
-    v2_diff = [0, 0, 0];
-  } else if (obj1.fixed) {
-    v1_diff = [0, 0, 0];
-    v2_diff = multiplyConst(normal, (impulse * 2) / obj2.mass);
-  } else if (obj2.fixed) {
-    v1_diff = multiplyConst(normal, (impulse * 2) / obj2.mass);
-    v2_diff = [0, 0, 0];
-  } else {
-    v1_diff = multiplyConst(normal, impulse / obj1.mass);
+  let v1_diff = [0, 0, 0];
+  let v2_diff = [0, 0, 0];
+  if (!obj1.fixed) {
+    v1_diff = multiplyConst(normal, impulse / obj2.mass);
+  }
+  if (!obj2.fixed) {
     v2_diff = multiplyConst(normal, impulse / obj2.mass);
   }
 
@@ -447,11 +564,117 @@ export function resolveVelocity(collision, obj1, obj2) {
   obj2.velocity = v2_after;
 }
 
+export function resolveForces(collision) {
+  // dont deal with moments for now
+  const {
+    normal,
+    obj1,
+    obj2,
+    obj1ContactArm,
+    obj2ContactArm,
+    obj1Closest,
+    obj2Closest,
+  } = collision;
+
+  // gravity already applied externally
+
+  // obj1.centerForce = [0, 0, 0];
+  // obj2.centerForce = [0, 0, 0];
+}
+
+export function resolveVelocityWithRotations(collision) {
+  /*
+  This is extends the above derivation with usage from
+  https://arc.net/l/quote/mudyryjs
+  A big thanks to Amir Vaxman - https://avaxman.github.io/
+  for the great lecture notes.
+  */
+  let { normal, obj1, obj2, obj1ContactArm, obj2ContactArm } = collision;
+
+  const frictionTangent = crossProduct(
+    crossProduct(normal, subtractVectors(obj1.velocity, obj2.velocity)),
+    normal
+  );
+  const staticFriction = 0.001;
+  const kineticFriction = 0.5;
+  const frictionComponent = multiplyConst(frictionTangent, staticFriction);
+  // normal = addVectors(normal, frictionComponent); // this is a hack but avoids a rewrite
+
+  const massD = 1 / obj1.mass + 1 / obj2.mass;
+  const crossArmNormal1 = crossProduct(obj1ContactArm, normal);
+  const inertiaTerm1 = multiplyVecMatrixVec(
+    crossArmNormal1,
+    obj1.getInverseInertia(obj1),
+    crossArmNormal1
+  );
+  const crossArmNormal2 = crossProduct(obj2ContactArm, normal);
+  const inertiaTerm2 = multiplyVecMatrixVec(
+    crossArmNormal2,
+    obj2.getInverseInertia(obj2),
+    crossArmNormal2
+  );
+  const denominator = massD + inertiaTerm1 + inertiaTerm2;
+
+  const Cr = 1; // (for now)
+  const impulse = -Math.abs(
+    -((Cr + 1) / denominator) *
+      dotProduct(subtractVectors(obj1.velocity, obj2.velocity), normal)
+  );
+
+  const withFriction = addVectors(normal, frictionComponent);
+
+  let v1_diff = [0, 0, 0];
+  let v2_diff = [0, 0, 0];
+  let w1_diff = [0, 0, 0];
+  let w2_diff = [0, 0, 0];
+  if (!obj1.fixed) {
+    v1_diff = multiplyConst(withFriction, impulse / obj2.mass);
+    w1_diff = multiplyMatrixVec(
+      obj1.getInverseInertia(obj1),
+      crossProduct(obj1ContactArm, multiplyConst(withFriction, impulse))
+    );
+  }
+  if (!obj2.fixed) {
+    v2_diff = multiplyConst(withFriction, impulse / obj2.mass);
+    w2_diff = multiplyMatrixVec(
+      obj2.getInverseInertia(obj2),
+      crossProduct(obj2ContactArm, multiplyConst(withFriction, impulse))
+    );
+  }
+
+  const v1_after = addVectors(obj1.velocity, v1_diff);
+  const v2_after = subtractVectors(obj2.velocity, v2_diff);
+
+  const w1_after = addVectors(obj1.angularVelocity, w1_diff);
+  const w2_after = subtractVectors(obj2.angularVelocity, w2_diff);
+
+  obj1.velocity = v1_after;
+  obj2.velocity = v2_after;
+
+  obj1.angularVelocity = w1_after;
+  obj2.angularVelocity = w2_after;
+}
+
 export function resolveCollision(collision) {
-  const { collide, normal, obj1Closest, obj2Closest, obj1, obj2 } = collision;
+  const {
+    collide,
+    normal,
+    obj1Closest,
+    obj2Closest,
+    obj1,
+    obj2,
+    obj1ContactArm,
+    obj2ContactArm,
+  } = collision;
+
   if (collide) {
     // first resolve positions, and update objects
-    resolvePosition(collision, obj1, obj2);
-    resolveVelocity(collision, obj1, obj2);
+    resolveForces(collision);
+    resolvePosition(collision);
+    if (obj1.shape === "box" && obj2.shape === "box") {
+      resolveVelocityWithRotations(collision);
+    } else {
+      resolveVelocity(collision);
+    }
   }
 }

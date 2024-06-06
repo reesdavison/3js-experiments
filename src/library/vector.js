@@ -85,6 +85,11 @@ export function rotateVector(vec, qtrn) {
   return [result[1], result[2], result[3]];
 }
 
+/*
+In our version of quaternion the scalar value is first ie
+q = a + bi + cj + dk
+q = [a, b, c, d]
+*/
 export function angleAxisToQuarternion(axis, radians) {
   const normAxis = normaliseVec(axis);
   const quarternion = [
@@ -94,6 +99,17 @@ export function angleAxisToQuarternion(axis, radians) {
     Math.sin(radians / 2) * normAxis[2],
   ];
   return quarternion;
+}
+
+export function quaternionToAngleAxis(quaternion) {
+  const theta = Math.acos(quaternion[0]) * 2;
+  if (theta == 0) {
+    return { angle: 0, axis: [1, 0, 0] };
+  }
+  const ax = quaternion[1] / Math.sin(theta / 2);
+  const ay = quaternion[2] / Math.sin(theta / 2);
+  const az = quaternion[3] / Math.sin(theta / 2);
+  return { angle: theta, axis: [ax, ay, az] };
 }
 
 export function rotateVectorAngleAxis(vec, axis, radians) {
@@ -157,4 +173,117 @@ export function normaliseVec(vec) {
 
 export function multiplyConst(vec, constant) {
   return [vec[0] * constant, vec[1] * constant, vec[2] * constant];
+}
+
+export function invertMatrix(m) {
+  // Taken from https://stackoverflow.com/questions/63981471/how-do-i-solve-inverse-of-3x3-matrices-without-using-a-library
+  const [[a, b, c], [d, e, f], [g, h, i]] = m;
+  const x = e * i - h * f,
+    y = f * g - d * i,
+    z = d * h - g * e,
+    det = a * x + b * y + c * z;
+  return det != 0
+    ? [
+        [x, c * h - b * i, b * f - c * e],
+        [y, a * i - c * g, d * c - a * f],
+        [z, g * b - a * h, a * e - d * b],
+      ].map((r) => r.map((v) => (v /= det)))
+    : null;
+}
+
+export function multiplyMatrix(m1, m2) {
+  const [[a1, b1, c1], [d1, e1, f1], [g1, h1, i1]] = m1;
+  const [[a2, b2, c2], [d2, e2, f2], [g2, h2, i2]] = m2;
+
+  return [
+    [
+      a1 * a2 + b1 * d2 + c1 * g2,
+      a1 * b2 + b1 * e2 + c1 * h2,
+      a1 * c2 + b1 * f2 + c1 * i2,
+    ],
+    [
+      d1 * a2 + e1 * d2 + f1 * g2,
+      d1 * b2 + e1 * e2 + f1 * h2,
+      d1 * c2 + e1 * f2 + f1 * i2,
+    ],
+    [
+      g1 * a2 + h1 * d2 + i1 * g2,
+      g1 * b2 + h1 * e2 + i1 * h2,
+      g1 * c2 + h1 * f2 + i1 * i2,
+    ],
+  ];
+}
+
+export function multiplyVecMatrixVec(v1, m, v2) {
+  const [a1, b1, c1] = v1;
+  const [[a2, b2, c2], [d2, e2, f2], [g2, h2, i2]] = m;
+  const [a3, b3, c3] = v2;
+
+  const scalar =
+    (a1 * a2 + b1 * d2 + c1 * g2) * a3 +
+    (a1 * b2 + b1 * e2 + c1 * h2) * b3 +
+    (a1 * c2 + b1 * f2 + c1 * i2) * c3;
+  return scalar;
+}
+
+// export function multiplyVecTMatrix(v, m) {
+//   const [a1, b1, c1] = v;
+//   const [[a2, b2, c2], [d2, e2, f2], [g2, h2, i2]] = m;
+
+//   const scalar =
+//     a2 * a3 +
+//     b2 * b3 +
+//     c2 * c3 +
+//     d2 * a3 +
+//     e2 * b3 +
+//     f2 * c3 +
+//     g2 * a3 +
+//     h2 * b3 +
+//     i2 * c3;
+//   return scalar;
+// }
+
+export function multiplyMatrixVec(m, v) {
+  const [[a1, b1, c1], [d1, e1, f1], [g1, h1, i1]] = m;
+  const [a2, b2, c2] = v;
+  const vector = [
+    a1 * a2 + b1 * b2 + c1 * c2,
+    d1 * a2 + e1 * b2 + f1 * c2,
+    g1 * a2 + h1 * b2 + i1 * c2,
+  ];
+  return vector;
+}
+
+export function transpose3x3Matrix(m) {
+  const [[a, b, c], [d, e, f], [g, h, i]] = m;
+  return [
+    [a, d, g],
+    [b, e, h],
+    [c, f, i],
+  ];
+}
+
+export function rotationMatrixFromAxisAngle(axis, angle) {
+  const [ux, uy, uz] = normaliseVec(axis);
+  const cosTheta = Math.cos(angle);
+  const C = 1 - cosTheta;
+  const sinTheta = Math.sin(angle);
+  const m = [
+    [
+      ux * ux * C + cosTheta,
+      ux * uy * C - uz * sinTheta,
+      ux * uz * C + uy * sinTheta,
+    ],
+    [
+      ux * uy * C + uz * sinTheta,
+      uy * uy * C + cosTheta,
+      uy * uz * C - ux * sinTheta,
+    ],
+    [
+      uz * ux * C - uy * sinTheta,
+      uz * uy * C + ux * sinTheta,
+      uz * uz * C + cosTheta,
+    ],
+  ];
+  return m;
 }

@@ -2,8 +2,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { gjkIntersection, resolveCollision } from "../library/collision.js";
-import { createBox } from "../library/box.js";
-import { createSphere } from "../library/sphere.js";
+import { createTHREEBox } from "../library/box.js";
+import { createTHREESphere } from "../library/sphere.js";
 import {
   createHelperGrid,
   getGravityForce,
@@ -34,31 +34,31 @@ scene.add(directionalLight);
 
 createHelperGrid(scene);
 
-const bottomPlane = createBox(
+const bottomPlane = createTHREEBox(
   scene,
+  0x456e4e,
   5,
   5,
+  0.2,
   [0, 0, 0],
   [0, 0, 0],
   [1, 0, 0],
   Math.PI / 2,
-  0.2,
   999999, // high mass to make immovable in collision resolution
-  0x456e4e,
   true
 );
 
-const leftPlane = createBox(
+const leftPlane = createTHREEBox(
   scene,
+  0x456e4e,
   5,
   5,
+  0.2,
   [-2.5, 2.5, 0],
   [0, 0, 0],
   [0, 1, 0],
   Math.PI / 2,
-  0.2,
   999999, // high mass to make immovable in collision resolution
-  0x456e4e,
   true
 );
 
@@ -76,33 +76,33 @@ const leftPlane = createBox(
 //   false
 // );
 
-const sphere1 = createSphere(
+const sphere1 = createTHREESphere(
   scene,
+  0x446df6,
   [-2, 1.5, 0],
   [2, 0, 0],
   10 ** 3, // mass
-  0x446df6,
   0.4,
   0.8,
   false
 );
-const sphere2 = createSphere(
+const sphere2 = createTHREESphere(
   scene,
+  0x446df6,
   [2, 1.2, 0],
   [-2, 0, 0],
   10 ** 3, // mass
-  0x446df6,
   0.4,
   0.8,
   false
 );
 
-const sphere3 = createSphere(
+const sphere3 = createTHREESphere(
   scene,
+  0x446df6,
   [-2, 2, 0],
   [1, -1, 0],
   10 ** 3,
-  0x446df6,
   0.4,
   0.8,
   false
@@ -146,14 +146,19 @@ function resolveAllCollisions() {
 function animate() {
   requestAnimationFrame(animate);
 
+  // only other external forces
+  movableObjects.forEach((obj) => {
+    obj.centerForce = getGravityForce(obj);
+  });
+
   resolveAllCollisions();
 
   movableObjects.forEach((obj) => {
-    eulerStep(getGravityForce(obj), obj);
+    eulerStep(obj);
   });
 
   movableObjects.forEach((obj) => {
-    obj.updatePosition(obj);
+    obj.updateTHREE(obj);
   });
 
   renderer.render(scene, camera);

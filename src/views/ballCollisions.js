@@ -53,6 +53,11 @@ let time = 0;
 function animate() {
   requestAnimationFrame(animate);
 
+  // only other external forces
+  movableObjects.forEach((obj) => {
+    obj.centerForce = [0, 0, 0];
+  });
+
   const collision = gjkIntersection(sphere1, sphere2);
   const { collide, normal: collideNormal } = collision;
 
@@ -61,8 +66,8 @@ function animate() {
     resolveCollision(collision);
   }
 
-  eulerStep([0, 0, 0], sphere1);
-  eulerStep([0, 0, 0], sphere2);
+  eulerStep(sphere1);
+  eulerStep(sphere2);
 
   sphere1.updatePosition(sphere1);
   sphere2.updatePosition(sphere2);

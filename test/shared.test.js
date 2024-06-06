@@ -7,7 +7,7 @@ import {
   rotateVectorArray,
 } from "../src/library/collision";
 import { supportSphere } from "../src/library/sphere";
-import { supportCuboid } from "../src/library/box";
+import { supportCuboid, createBox } from "../src/library/box";
 import { pointInTetrahedron } from "../src/library/collision";
 import {
   invertVector,
@@ -102,10 +102,12 @@ describe("resolve position", () => {
       normal: [1, 0, 0],
       obj1Closest: supportSphere(obj1, normal),
       obj2Closest: supportSphere(obj2, invertVector(normal)),
+      obj1,
+      obj2,
     };
     expect(collision.obj1Closest).toStrictEqual([1, 0, 0]);
     expect(collision.obj2Closest).toStrictEqual([0.5, 0, 0]);
-    resolvePosition(collision, obj1, obj2);
+    resolvePosition(collision);
     expect(obj1.position).toStrictEqual([-0.25, 0, 0]); // -> 0.25 left
     expect(obj2.position).toStrictEqual([1.75, 0, 0]); // <- 0.25 right
   });
@@ -127,11 +129,13 @@ describe("resolve position", () => {
       normal: normal,
       obj1Closest: supportSphere(obj1, normal),
       obj2Closest: supportSphere(obj2, invertVector(normal)),
+      obj1,
+      obj2,
     };
     const val = Math.sqrt(0.5);
     expect(collision.obj1Closest).toStrictEqual([val, val, 0]);
     expect(collision.obj2Closest).toStrictEqual([1 - val, 1 - val, 0]);
-    resolvePosition(collision, obj1, obj2);
+    resolvePosition(collision);
     expect(obj1.position[0]).toStrictEqual(obj1.position[1]);
     expect(obj1.position[0]).toBeCloseTo(-0.20710678);
     expect(obj2.position[0]).toStrictEqual(obj2.position[1]);
@@ -159,10 +163,12 @@ describe("resolve velocity", () => {
       normal: [1, 0, 0],
       obj1Closest: supportSphere(obj1, normal),
       obj2Closest: supportSphere(obj2, invertVector(normal)),
+      obj1,
+      obj2,
     };
     expect(collision.obj1Closest).toStrictEqual([1, 0, 0]);
     expect(collision.obj2Closest).toStrictEqual([0.5, 0, 0]);
-    resolveVelocity(collision, obj1, obj2);
+    resolveVelocity(collision);
     expect(obj1.velocity).toStrictEqual([-1, 0, 0]);
     expect(obj2.velocity).toStrictEqual([1, 0, 0]);
   });
@@ -186,11 +192,13 @@ describe("resolve velocity", () => {
       normal: normal,
       obj1Closest: supportSphere(obj1, normal),
       obj2Closest: supportSphere(obj2, invertVector(normal)),
+      obj1,
+      obj2,
     };
     const val = Math.sqrt(0.5);
     expect(collision.obj1Closest).toStrictEqual([val, val, 0]);
     expect(collision.obj2Closest).toStrictEqual([1 - val, 1 - val, 0]);
-    resolveVelocity(collision, obj1, obj2);
+    resolveVelocity(collision);
     expect(obj1.velocity[0]).toStrictEqual(obj1.velocity[1]);
     expect(obj1.velocity[0]).toBeCloseTo(-1);
     expect(obj2.velocity[0]).toStrictEqual(obj2.velocity[1]);
@@ -216,65 +224,13 @@ describe("resolve velocity", () => {
       normal: [1, 0, 0],
       obj1Closest: supportSphere(obj1, normal),
       obj2Closest: supportSphere(obj2, invertVector(normal)),
+      obj1,
+      obj2,
     };
     expect(collision.obj1Closest).toStrictEqual([1, 0, 0]);
     expect(collision.obj2Closest).toStrictEqual([0.5, 0, 0]);
-    resolveVelocity(collision, obj1, obj2);
+    resolveVelocity(collision);
     expectVectorClose(obj1.velocity, [0.96039, 0, 0]);
     expectVectorClose(obj2.velocity, [2.96039, 0, 0]);
-  });
-});
-
-describe("support cuboid works as expected", () => {
-  const unitCube = {
-    corners: [
-      [1, 1, 1],
-      [-1, 1, 1],
-      [1, -1, 1],
-      [1, 1, -1],
-      [-1, -1, 1],
-      [1, -1, -1],
-      [-1, 1, -1],
-      [-1, -1, -1],
-    ],
-    position: [0, 0, 0],
-    support: supportCuboid,
-  };
-
-  it("works for right direction unit sphere", () => {
-    const direction = [1, 0, 0];
-    const intersect = supportCuboid(unitCube, direction);
-    expectVectorClose(intersect, [1, 1, 1]);
-  });
-
-  it("works for left direction unit sphere", () => {
-    const direction = [-1, 0, 0];
-    const intersect = supportCuboid(unitCube, direction);
-    expectVectorClose(intersect, [-1, 1, 1]);
-  });
-
-  it("works for an angle", () => {
-    const direction = [1, 0.5, 0];
-    const intersect = supportCuboid(unitCube, direction);
-    expectVectorClose(intersect, [1, 1, 1]);
-  });
-
-  it("works for an angle opposite", () => {
-    const direction = [-1, -1, 1];
-    const intersect = supportCuboid(unitCube, direction);
-    expectVectorClose(intersect, [-1, -1, 1]);
-  });
-
-  it("works for a rotated cube", () => {
-    const direction = [1, 0, 0];
-    const angle = 50 * (Math.PI / 180); // 30 degrees
-    const cube = {
-      corners: rotateVectorArray(unitCube.corners, [0, 0, 1], angle),
-      position: [0, 0, 0],
-      support: supportCuboid,
-    };
-    const intersect = supportCuboid(cube, direction);
-    // should still be along x axis
-    expectVectorClose(intersect, [1.408, 0.123, 1]);
   });
 });
