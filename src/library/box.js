@@ -37,6 +37,19 @@ export function getCornerIndicesForPlane(plane) {
   }
 }
 
+export function getCornerIndicesForPlaneIndex(planeIndex) {
+  // return anticlockwise
+  const planeIndices = [
+    [1, 0, 3, 6],
+    [6, 7, 4, 1],
+    [3, 0, 2, 5],
+    [4, 7, 5, 2],
+    [6, 3, 5, 7],
+    [1, 4, 2, 0],
+  ];
+  return planeIndices[planeIndex];
+}
+
 export function getInverseInertiaMatrix(
   width = 1,
   height = 1,
@@ -156,47 +169,44 @@ export function createBox(
     // const { angle, axis } = getRotation(obj);
 
     // 0->1 = subtract(1, 0)
-    let top = crossProduct(
-      subtractVectors(corners[3], corners[0]),
-      subtractVectors(corners[1], corners[0])
+    let top = normaliseVec(
+      crossProduct(
+        subtractVectors(corners[3], corners[0]),
+        subtractVectors(corners[1], corners[0])
+      )
     );
-    let left = crossProduct(
-      subtractVectors(corners[1], corners[4]),
-      subtractVectors(corners[7], corners[4])
+    let left = normaliseVec(
+      crossProduct(
+        subtractVectors(corners[1], corners[4]),
+        subtractVectors(corners[7], corners[4])
+      )
     );
-    let right = crossProduct(
-      subtractVectors(corners[5], corners[2]),
-      subtractVectors(corners[0], corners[2])
+    let right = normaliseVec(
+      crossProduct(
+        subtractVectors(corners[5], corners[2]),
+        subtractVectors(corners[0], corners[2])
+      )
     );
-    let bottom = crossProduct(
-      subtractVectors(corners[4], corners[2]),
-      subtractVectors(corners[5], corners[2])
+    let bottom = normaliseVec(
+      crossProduct(
+        subtractVectors(corners[4], corners[2]),
+        subtractVectors(corners[5], corners[2])
+      )
     );
-    let back = crossProduct(
-      subtractVectors(corners[7], corners[5]),
-      subtractVectors(corners[3], corners[5])
+    let back = normaliseVec(
+      crossProduct(
+        subtractVectors(corners[7], corners[5]),
+        subtractVectors(corners[3], corners[5])
+      )
     );
-    let forward = crossProduct(
-      subtractVectors(corners[0], corners[2]),
-      subtractVectors(corners[4], corners[2])
+    let forward = normaliseVec(
+      crossProduct(
+        subtractVectors(corners[0], corners[2]),
+        subtractVectors(corners[4], corners[2])
+      )
     );
 
-    // const vecList = [top, left, right, bottom, back, forward];
-
-    // [top, left, right, bottom, back, forward] = rotateVectorArray(
-    //   vecList,
-    //   axis,
-    //   angle
-    // );
-
-    return {
-      top,
-      left,
-      right,
-      bottom,
-      back,
-      forward,
-    };
+    return [top, left, right, bottom, back, forward];
   }
 
   function getCuboidCorners(obj) {

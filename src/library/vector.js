@@ -287,3 +287,7 @@ export function rotationMatrixFromAxisAngle(axis, angle) {
   ];
   return m;
 }
+
+export function sameDirection(vec1, vec2) {
+  return dotProduct(vec1, vec2) > 0;
+}

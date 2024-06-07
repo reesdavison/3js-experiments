@@ -50,7 +50,7 @@ const bottomPlane = createTHREEBox(
   [0, 0, 0],
   [1, 0, 0],
   Math.PI / 2,
-  objectMass,
+  objectMass ** 10,
   true
 );
 
@@ -64,59 +64,59 @@ const leftPlane = createTHREEBox(
   [0, 0, 0],
   [0, 1, 0],
   Math.PI / 2,
-  objectMass,
+  objectMass ** 10,
   true
 );
 
 const boxLen = 0.75;
 
-const movableBox1 = createTHREEBox(
-  scene,
-  0x446df6,
-  boxLen,
-  boxLen,
-  boxLen,
-  [-1, 1.5, 0],
-  [4, 0, 0],
-  [0, 1, 0],
-  Math.PI / 2,
-  objectMass,
-  false,
-  1,
-  [0, 1, 0]
-);
+// const movableBox1 = createTHREEBox(
+//   scene,
+//   0x446df6,
+//   boxLen,
+//   boxLen,
+//   boxLen,
+//   [-1, 1.5, 0],
+//   [2, 0, 0],
+//   [0, 1, 0],
+//   Math.PI / 2,
+//   objectMass,
+//   false,
+//   1,
+//   [0, 1, 0]
+// );
 
-const movableBox2 = createTHREEBox(
-  scene,
-  0x446df6,
-  boxLen,
-  boxLen,
-  boxLen,
-  [2, 1.2, 0],
-  [-4, 0, 0],
-  [0, 1, 0],
-  Math.PI / 2,
-  objectMass,
-  false,
-  1,
-  normaliseVec([1, 1, 0])
-);
+// const movableBox2 = createTHREEBox(
+//   scene,
+//   0x446df6,
+//   boxLen,
+//   boxLen,
+//   boxLen,
+//   [2, 1.2, 0],
+//   [-2, 0, 0],
+//   [0, 1, 0],
+//   Math.PI / 2,
+//   objectMass,
+//   false,
+//   1,
+//   normaliseVec([1, 1, 0])
+// );
 
-const movableBox3 = createTHREEBox(
-  scene,
-  0x446df6,
-  boxLen,
-  boxLen,
-  boxLen,
-  [1, 2, 0],
-  [2, -2, 0],
-  [0, 1, 0],
-  Math.PI / 2,
-  objectMass,
-  false,
-  2,
-  [0.5, 0, 0.5]
-);
+// const movableBox3 = createTHREEBox(
+//   scene,
+//   0x446df6,
+//   boxLen,
+//   boxLen,
+//   boxLen,
+//   [1, 2, 0],
+//   [1, -1, 0],
+//   [0, 1, 0],
+//   Math.PI / 2,
+//   objectMass,
+//   false,
+//   2,
+//   [0.5, 0, 0.5]
+// );
 
 const movableBox4 = createTHREEBox(
   scene,
@@ -124,13 +124,13 @@ const movableBox4 = createTHREEBox(
   boxLen,
   boxLen,
   boxLen,
-  [3, boxLen / 2, -3],
-  [1, 0, 0],
+  [2, boxLen / 2, -3],
+  [0, 0, 0],
   [0, 1, 0],
-  Math.PI / 2,
+  0,
   objectMass,
   false,
-  2,
+  0,
   [0.5, 0, 0.5]
 );
 
@@ -154,9 +154,9 @@ let time = 0;
 const allObjects = [
   // cuboid1,
   // cuboid2,
-  movableBox1,
-  movableBox2,
-  movableBox3,
+  // movableBox1,
+  // movableBox2,
+  // movableBox3,
   movableBox4,
   bottomPlane,
   leftPlane,
