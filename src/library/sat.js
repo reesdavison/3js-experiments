@@ -1,3 +1,10 @@
+/*
+Separating axis theorem
+Adapted the implementation from
+https://dyn4j.org/2010/01/sat/
+Thank you William Bittle
+*/
+
 import {
   dotProduct,
   invertVector,
@@ -54,10 +61,6 @@ export function getOverlap(p1, p2) {
 }
 
 export function sat(obj1, obj2) {
-  // Separating axis theorem
-  // Adapted the implementation from
-  // https://dyn4j.org/2010/01/sat/
-
   let overlap = 9999999999; // really large value;
   let smallest;
   const obj1Axes = obj1.getOuterPlaneNormals(obj1);

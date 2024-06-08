@@ -8,7 +8,6 @@ import {
   normaliseVec,
   dotProduct,
   angleAxisToQuarternion,
-  hamiltonianProduct,
   quaternionToAngleAxis,
   invertMatrix,
   rotationMatrixFromAxisAngle,
@@ -209,6 +208,28 @@ export function createBox(
     return [top, left, right, bottom, back, forward];
   }
 
+  function getConnectedVerticesIndex(index) {
+    // return anticlockwise
+    switch (index) {
+      case 0:
+        return [3, 1, 2];
+      case 1:
+        return [6, 4, 0];
+      case 2:
+        return [5, 0, 4];
+      case 3:
+        return [6, 0, 5];
+      case 4:
+        return [7, 2, 1];
+      case 5:
+        return [3, 2, 7];
+      case 6:
+        return [3, 7, 1];
+      case 7:
+        return [4, 6, 5];
+    }
+  }
+
   function getCuboidCorners(obj) {
     const { width, height, depth, position } = obj;
 
@@ -258,6 +279,7 @@ export function createBox(
     getBounds,
     getCornerIndicesForPlane,
     getOuterPlaneNormals,
+    getConnectedVerticesIndex,
     getRotation,
     centerForce: [0, 0, 0],
   };
