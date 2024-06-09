@@ -3,11 +3,10 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { G } from "../library/constants";
 import { setupCamera } from "../library/helpers";
-import { eulerStep } from "../library/simulate";
 import { createArrow, updateArrow } from "../library/helpers";
 import { TIME_STEP } from "../library/constants";
 import { addVectors } from "../library/vector";
-import { createSphere } from "../library/sphere";
+import { createTHREESphere } from "../library/sphere";
 
 // 3js setup + camera + light
 const scene = new THREE.Scene();
@@ -44,13 +43,51 @@ function getForce(obj1, obj2) {
   return [force_mag * u_ab0, force_mag * u_ab1, force_mag * u_ab2];
 }
 
-const sphere1 = createSphere(scene, [0, 0, 0], [0, 0, 0], 10 ** 11, 0xaf748d);
-const sphere2 = createSphere(scene, [2, 0, 0], [0, 1, 0], 10 ** 3, 0x446df6);
-const sphere3 = createSphere(scene, [-2, 0, 0], [0, -1, 0], 10 ** 3, 0x446df6);
+const sphere1 = createTHREESphere(
+  scene,
+  0xaf748d,
+  [0, 0, 0],
+  [0, 0, 0],
+  10 ** 11
+);
+const sphere2 = createTHREESphere(
+  scene,
+  0x446df6,
+  [2, 0, 0],
+  [0, 1, 0],
+  10 ** 3
+);
+const sphere3 = createTHREESphere(
+  scene,
+  0x446df6,
+  [-2, 0, 0],
+  [0, -1, 0],
+  10 ** 3
+);
 const forceArrow1 = createArrow([0, 0, 0], [0, 0, 0], scene);
 const forceArrow3 = createArrow([0, 0, 0], [0, 0, 0], scene);
 
 let time = 0;
+
+function eulerStep(force, obj) {
+  // this is the semi-implicit euler method
+  // that's because we update position using
+  // a future velocity measurement
+
+  // if we were to use the old velocity, this
+  // would be explicit Euler integration
+  const acc = force.map((force_comp) => force_comp / obj.mass);
+  const vel0 = obj.velocity[0] + TIME_STEP * acc[0];
+  const vel1 = obj.velocity[1] + TIME_STEP * acc[1];
+  const vel2 = obj.velocity[2] + TIME_STEP * acc[2];
+
+  const pos0 = obj.position[0] + TIME_STEP * vel0;
+  const pos1 = obj.position[1] + TIME_STEP * vel1;
+  const pos2 = obj.position[2] + TIME_STEP * vel2;
+
+  obj.position = [pos0, pos1, pos2];
+  obj.velocity = [vel0, vel1, vel2];
+}
 
 function animate() {
   requestAnimationFrame(animate);
@@ -75,9 +112,9 @@ function animate() {
   updateArrow(forceArrow1, forceOnSphere2, sphere2.position);
   updateArrow(forceArrow3, forceOnSphere3, sphere3.position);
 
-  sphere1.updatePosition(sphere1);
-  sphere2.updatePosition(sphere2);
-  sphere3.updatePosition(sphere3);
+  sphere1.updateTHREE(sphere1);
+  sphere2.updateTHREE(sphere2);
+  sphere3.updateTHREE(sphere3);
 
   renderer.render(scene, camera);
   time += TIME_STEP;

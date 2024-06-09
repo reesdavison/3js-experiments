@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { createSphere } from "../library/sphere.js";
+import { createTHREESphere } from "../library/sphere.js";
 import { addVectors } from "../library/vector.js";
 import { G } from "../library/constants.js";
 
@@ -74,20 +74,20 @@ function eulerStepWithGround(force, obj, useGroundConstraint = false) {
 
 // simulate earth
 // we could use g=9.81 but we get to re-use our code this way
-const earth = createSphere(
+const earth = createTHREESphere(
   scene,
+  0x47673b,
   [0, -6335439, 0], // distance in metres between earths surface and centre
   [0, 0, 0],
   5.9722 * 10 ** 24, // mass in kg of earth,
-  0x47673b,
   6335439
 );
-const sphere2 = createSphere(
+const sphere2 = createTHREESphere(
   scene,
+  0x446df6,
   [0, 10, 0],
   [0, 2, 0],
   10 ** 3, // mass
-  0x446df6,
   0.25,
   0.8
 );
@@ -106,13 +106,11 @@ function animate() {
   const forceOfGravity = getForce(sphere2, earth);
   const forceOnSphere2 = addVectors(forceOfGravity);
 
-  console.log(sphere2);
-
   eulerStepWithGround(forceOnEarth, earth);
   eulerStepWithGround(forceOnSphere2, sphere2, true);
 
-  earth.updatePosition(earth);
-  sphere2.updatePosition(sphere2);
+  earth.updateTHREE(earth);
+  sphere2.updateTHREE(sphere2);
 
   renderer.render(scene, camera);
   time += TIME_STEP;

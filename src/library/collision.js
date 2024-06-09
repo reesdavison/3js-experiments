@@ -303,23 +303,20 @@ function getCuboidCuboidCollisionDetails(obj1, obj2) {
 We make the assumption in this code that collision occurs at a plane
 Not on lines or corners
 */
-export function getSphereCuboidCollisionDetails(obj1, obj2) {
+export function getSphereCuboidCollisionDetails(obj1, obj2, contactPoint) {
   const sphere = obj1.shape === "sphere" ? obj1 : obj2;
   const cuboid = obj1.shape === "box" ? obj1 : obj2;
 
   const obj1IsCuboid = obj1 === cuboid;
 
-  const cuboidToSphereDirection = subtractVectors(
-    sphere.position,
-    cuboid.position
-  );
+  const cuboidOutDirection = subtractVectors(sphere.position, contactPoint);
 
   const outerNormals = cuboid.getOuterPlaneNormals(cuboid);
 
   const sortedDotPlanes = outerNormals
     .map((norm, planeIndex) => {
       return {
-        dp: dotProduct(cuboidToSphereDirection, norm),
+        dp: dotProduct(cuboidOutDirection, norm),
         planeIndex,
         norm: norm,
       };
@@ -415,7 +412,8 @@ export function gjkIntersection(
       } else if (obj1.shape === "sphere" || obj2.shape === "sphere") {
         ({ normal, obj1Closest, obj2Closest } = getSphereCuboidCollisionDetails(
           obj1,
-          obj2
+          obj2,
+          contactPoint
         ));
       } else {
         ({ normal, contactPoint, overlapDist, collide, contactPoints } =

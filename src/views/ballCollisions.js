@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { createSphere } from "../library/sphere.js";
+import { createTHREESphere } from "../library/sphere.js";
 
 import { gjkIntersection, resolveCollision } from "../library/collision.js";
 import { G } from "../library/constants.js";
@@ -26,26 +26,28 @@ scene.add(light);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 10);
 scene.add(directionalLight);
 
-const sphere1 = createSphere(
+const sphere1 = createTHREESphere(
   scene,
+  0x446df6,
   [-2, -2, 0],
   [1, 1, 0],
   10 ** 3, // mass
-  0x446df6,
   0.75,
   0.8
 );
-const sphere2 = createSphere(
+const sphere2 = createTHREESphere(
   scene,
+  0x446df6,
   [2, -2, 0],
   [-1, 1, 0],
   10 ** 3, // mass
-  0x446df6,
   0.75,
   0.8
 );
 
 const normalArrow = createArrow([90, 90, 90], [90, 90, 90], scene);
+
+const movableObjects = [sphere1, sphere2];
 
 const TIME_STEP = 0.01;
 let time = 0;
@@ -69,8 +71,8 @@ function animate() {
   eulerStep(sphere1);
   eulerStep(sphere2);
 
-  sphere1.updatePosition(sphere1);
-  sphere2.updatePosition(sphere2);
+  sphere1.updateTHREE(sphere1);
+  sphere2.updateTHREE(sphere2);
 
   renderer.render(scene, camera);
   time += TIME_STEP;

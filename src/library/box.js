@@ -122,17 +122,6 @@ export function createBox(
     };
   }
 
-  // function updateCuboidCorners(obj, rotationAxis, rotationRadians) {
-  //   return getCuboidCorners(
-  //     width,
-  //     height,
-  //     depth,
-  //     obj.position,
-  //     rotationAxis,
-  //     rotationRadians
-  //   );
-  // }
-
   function getRotation(obj) {
     const angularRotationMag = magnitude(obj.angularRotation);
     const quaternion = angleAxisToQuarternion(
