@@ -226,13 +226,8 @@ export function nearestSimplex(simplex, obj1Points, obj2Points) {
           obj2Points
         );
         if (magnitude(subtractVectors(obj1Closest, obj2Closest)) > 0.1) {
-          console.log("Contact points should be the same");
+          console.warn("Contact points should be the same");
         }
-        // console.log("Simplex", simplex);
-        // console.log("bary weights", baryWeights);
-        // console.log("obj1Points", obj1Points);
-        // console.log("obj2Points", obj2Points);
-        // console.log("closest", obj1Closest, obj2Closest);
         return {
           contactPoint: obj1Closest,
           simplex,
@@ -290,7 +285,6 @@ function getCuboidCuboidCollisionDetails(obj1, obj2) {
   }
 
   const numContactPoints = contactPoints.length;
-  console.log("NUM CONTACT POINTS", numContactPoints);
   const avgContactPoint = multiplyConst(
     addVectors(...contactPoints),
     1 / numContactPoints
@@ -304,125 +298,6 @@ function getCuboidCuboidCollisionDetails(obj1, obj2) {
     contactPoints,
   };
 }
-
-// function getClosestPointCuboid(obj, contactPoint) {
-//   const objOuterNormals = obj.getOuterPlaneNormals(obj);
-//   const corners = obj.getCuboidCorners(obj);
-
-//   const outDirection = subtractVectors(contactPoint, obj.position);
-
-//   //sorted planes
-//   const sp = objOuterNormals
-//     .map((norm, planeIndex) => {
-//       const planePointIndices = obj.getCornerIndicesForPlaneIndex(planeIndex);
-//       const intersection = intersectLineAndPlane(
-//         contactPoint,
-//         corners[planePointIndices[0]],
-//         outDirection,
-//         norm
-//       );
-//       const size = squaredDistanceFromOrigin(
-//         subtractVectors(obj.position, intersection)
-//       );
-//       const isSameDirection = sameDirection(outDirection, norm);
-//       return {
-//         size: size,
-//         isSameDirection,
-//         intersection,
-//         planeIndex,
-//         norm: norm,
-//       };
-//     })
-//     .filter((val) => val.isSameDirection)
-//     .toSorted((a, b) => a.size - b.size); // ascending
-
-//   // in these cases its ambiguous which surface to move forwards with
-//   if (isClose(sp[0].size, sp[1].size) && isClose(sp[0].size, sp[2].size)) {
-//     // contactPoint is at a corner
-//   } else if (isClose(sp[0].size, sp[1].size)) {
-//     // contactPoint is on a line
-//   }
-
-//   const norm = normaliseVec(sp[0].norm);
-
-//   const planePointIndices = obj.getCornerIndicesForPlaneIndex(sp[0].planeIndex);
-//   const [i1, i2, i3, i4] = planePointIndices;
-
-//   const planePoint = corners[i1];
-
-//   const closest = intersectLineAndPlane(
-//     contactPoint,
-//     planePoint,
-//     outDirection,
-//     norm
-//   );
-
-//   const surfaceCenterPoint = multiplyConst(
-//     addVectors(corners[i1], corners[i2], corners[i3], corners[i4]),
-//     0.25
-//   );
-
-//   // corners are returned anticlockwise
-//   const surfaceArea =
-//     magnitude(subtractVectors(corners[2], corners[1])) *
-//     magnitude(subtractVectors(corners[3], corners[2]));
-
-//   // deal with corners touching here
-//   // deal with lines touching here
-//   // const mostAccurateNorm = normaliseVec(subtractVectors())
-
-//   return { norm, closest, surfaceCenterPoint, surfaceArea };
-// }
-
-// export function getCuboidCuboidCollisionDetails(obj1, obj2, contactPoint) {
-//   let {
-//     closest: obj1Closest,
-//     norm: obj1Norm,
-//     surfaceCenterPoint: obj1SurfaceCenterPoint,
-//     surfaceArea: obj1SurfaceArea,
-//   } = getClosestPointCuboid(obj1, contactPoint);
-//   let {
-//     closest: obj2Closest,
-//     norm: obj2Norm,
-//     surfaceCenterPoint: obj2SurfaceCenterPoint,
-//     surfaceArea: obj2SurfaceArea,
-//   } = getClosestPointCuboid(obj2, contactPoint);
-
-//   let newContactPoint;
-//   if (dotProduct(obj1Norm, obj2Norm) < -0.8) {
-//     // ie the planes are almost parallel
-//     // we need to refine the contact point, as otherwise
-//     // we introduce moments about the center
-//     // Use the center point of the smallest cuboid
-//     newContactPoint =
-//       obj1SurfaceArea <= obj2SurfaceArea
-//         ? obj1SurfaceCenterPoint
-//         : obj2SurfaceCenterPoint;
-
-//     ({
-//       closest: obj1Closest,
-//       norm: obj1Norm,
-//       surfaceCenterPoint: obj1SurfaceCenterPoint,
-//       surfaceArea: obj1SurfaceArea,
-//     } = getClosestPointCuboid(obj1, newContactPoint));
-//     ({
-//       closest: obj2Closest,
-//       norm: obj2Norm,
-//       surfaceCenterPoint: obj2SurfaceCenterPoint,
-//       surfaceArea: obj2SurfaceArea,
-//     } = getClosestPointCuboid(obj2, newContactPoint));
-//   }
-
-//   return {
-//     normal:
-//       obj1SurfaceArea <= obj2SurfaceArea ? invertVector(obj2Norm) : obj1Norm,
-//     obj1Norm, //multiplyConst(addVectors(obj1Norm, invertVector(obj2Norm)), 0.5),
-//     obj2Norm,
-//     obj1Closest,
-//     obj2Closest,
-//     contactPoint: newContactPoint || contactPoint,
-//   };
-// }
 
 /*
 We make the assumption in this code that collision occurs at a plane
@@ -604,9 +479,6 @@ export function resolvePosition(collision) {
   const d =
     Math.abs(overlapDist) ||
     magnitude(subtractVectors(obj1Closest, obj2Closest));
-  // if (d > 0.3) {
-  //   debugger;
-  // }
 
   const totalMass = obj1.mass + obj2.mass;
   const obj1Frac = obj2.mass / totalMass;
@@ -615,11 +487,9 @@ export function resolvePosition(collision) {
   const d2 = d * obj2Frac;
 
   if (!obj1.fixed) {
-    // && d1 > 0.01) {
     obj1.position = subtractVectors(obj1.position, multiplyConst(normal, d1));
   }
   if (!obj2.fixed) {
-    // && d2 > 0.01) {
     obj2.position = addVectors(obj2.position, multiplyConst(normal, d2));
   }
 }
@@ -664,14 +534,6 @@ export function resolveVelocity(collision) {
       dotProduct(subtractVectors(obj1.velocity, obj2.velocity), normal)
   );
 
-  // const mag_v1_before = magnitude(obj1.velocity);
-  // const mag_v1_after = magnitude(v1_after);
-  // const mag_v2_before = magnitude(obj2.velocity);
-  // const mag_v2_after = magnitude(v2_after);
-  // console.log(
-  //   `V1 before:${mag_v1_before},after:${mag_v1_after}, V2 before:${mag_v2_before},after:${mag_v2_after}`
-  // );
-
   let v1_diff = [0, 0, 0];
   let v2_diff = [0, 0, 0];
   if (!obj1.fixed) {
@@ -686,24 +548,6 @@ export function resolveVelocity(collision) {
 
   obj1.velocity = v1_after;
   obj2.velocity = v2_after;
-}
-
-export function resolveForces(collision) {
-  // dont deal with moments for now
-  const {
-    normal,
-    obj1,
-    obj2,
-    obj1ContactArm,
-    obj2ContactArm,
-    obj1Closest,
-    obj2Closest,
-  } = collision;
-
-  // gravity already applied externally
-
-  // obj1.centerForce = [0, 0, 0];
-  // obj2.centerForce = [0, 0, 0];
 }
 
 export function resolveVelocityWithRotations(collision) {
@@ -822,8 +666,6 @@ export function resolveCollision(collision) {
   } = collision;
 
   if (collide) {
-    // first resolve positions, and update objects
-    resolveForces(collision);
     resolvePosition(collision);
     if (obj1.shape === "box" && obj2.shape === "box") {
       resolveVelocityWithRotations(collision);

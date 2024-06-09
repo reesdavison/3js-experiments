@@ -15,6 +15,8 @@ import {
   transpose3x3Matrix,
   multiplyConst,
   magnitude,
+  multiplyVecMatrixVec,
+  squaredDistanceFromOrigin,
 } from "./vector";
 import { zeroMatrix } from "./constants";
 
@@ -49,15 +51,18 @@ export function getCornerIndicesForPlaneIndex(planeIndex) {
   return planeIndices[planeIndex];
 }
 
-function getInverseInertiaMatrix(width = 1, height = 1, depth = 1, mass = 1) {
+function getInertiaMatrix(width = 1, height = 1, depth = 1, mass = 1) {
   const C = mass / 12;
   const inertiaMatrix = [
     [C * height ** 2 + depth ** 2, 0, 0],
     [0, C * width ** 2 + depth ** 2, 0],
     [0, 0, C * width ** 2 + height ** 2],
   ];
+  return inertiaMatrix;
+}
 
-  return invertMatrix(inertiaMatrix);
+function getInverseInertiaMatrix(width = 1, height = 1, depth = 1, mass = 1) {
+  return invertMatrix(getInertiaMatrix(width, height, depth, mass));
 }
 
 export function supportCuboid(obj, direction) {
@@ -258,6 +263,24 @@ export function createBox(
     return corners;
   }
 
+  function getNormalisedMassKineticEnergy(obj) {
+    // set mass to 1
+    const I = getInertiaMatrix(obj.width, obj.height, obj.depth, 1);
+    const { angle: totalAngle, axis: totalAxis } = getRotation(obj);
+    const R = rotationMatrixFromAxisAngle(totalAxis, totalAngle);
+    const rotatedI = multiplyMatrix(
+      multiplyMatrix(transpose3x3Matrix(R), I),
+      R
+    );
+
+    const w = obj.angularVelocity;
+    const rotationalE = 0.5 * multiplyVecMatrixVec(w, rotatedI, w);
+
+    // ignore mass in this equation
+    const translationalE = 0.5 * squaredDistanceFromOrigin(obj.velocity);
+    return rotationalE + translationalE;
+  }
+
   return {
     shape: "box",
     width,
@@ -277,6 +300,7 @@ export function createBox(
     getOuterPlaneNormals,
     getConnectedVerticesIndex,
     getCornerIndicesForPlaneIndex,
+    getNormalisedMassKineticEnergy,
     getRotation,
     centerForce: [0, 0, 0],
   };
