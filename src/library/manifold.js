@@ -147,13 +147,15 @@ export function getContactManifold(obj1, obj2, normal) {
   }
 
   const refMax1 = refPlaneVx[0];
-  const refMax2 = refPlaneVx[1];
 
   const max = dotProduct(invRefNorm, refMax1);
-  const max2 = dotProduct(invRefNorm, refMax2);
-  if (max != max2) {
-    throw new Error("I dont understand");
-  }
+  // This commented out code is because I thought max1 and max2 should always
+  // be roughly the same, and couldnt work out why it wouldn't be so wanted to check
+  // const refMax2 = refPlaneVx[1];
+  // const max2 = dotProduct(invRefNorm, refMax2);
+  // if (max != max2) {
+  //   throw new Error("I dont understand");
+  // }
 
   // const newClippedPoints = [];
   clippedPoints = clippedPoints.filter(

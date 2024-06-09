@@ -15,7 +15,11 @@ import {
   invertMatrix,
   sameDirection,
 } from "./vector";
+
+import { sat } from "./sat";
+import { getContactManifold } from "./manifold";
 import { XYZPointToArray, getGravityForce } from "./helpers";
+import { TIME_STEP } from "./constants";
 
 /*
 Major help with the below from
@@ -273,133 +277,152 @@ function isClose(val1, val2, absTol) {
   return false;
 }
 
-function getClosestPointCuboid(obj, contactPoint) {
-  const objOuterNormals = obj.getOuterPlaneNormals(obj);
-  const corners = obj.getCuboidCorners(obj);
+function getCuboidCuboidCollisionDetails(obj1, obj2) {
+  const { direction: normal, overlapDist, hasOverlap } = sat(obj1, obj2);
 
-  const outDirection = subtractVectors(contactPoint, obj.position);
-
-  //sorted planes
-  const sp = Object.entries(objOuterNormals)
-    .map(([key, norm], index) => {
-      const planePointIndices = obj.getCornerIndicesForPlane(key);
-      const intersection = intersectLineAndPlane(
-        contactPoint,
-        corners[planePointIndices[0]],
-        outDirection,
-        norm
-      );
-      const size = squaredDistanceFromOrigin(
-        subtractVectors(obj.position, intersection)
-      );
-      const isSameDirection = sameDirection(outDirection, norm);
-      return {
-        size: size,
-        isSameDirection,
-        intersection,
-        index,
-        planeDirectionStr: key,
-        norm: norm,
-      };
-    })
-    .filter((val) => val.isSameDirection)
-    .toSorted((a, b) => a.size - b.size); // ascending
-
-  // in these cases its ambiguous which surface to move forwards with
-  if (isClose(sp[0].size, sp[1].size) && isClose(sp[0].size, sp[2].size)) {
-    // contactPoint is at a corner
-  } else if (isClose(sp[0].size, sp[1].size)) {
-    // contactPoint is on a line
+  if (!hasOverlap) {
+    return { collide: false };
   }
 
-  const norm = normaliseVec(sp[0].norm);
-
-  const planePointIndices = obj.getCornerIndicesForPlane(
-    sp[0].planeDirectionStr
-  );
-  const [i1, i2, i3, i4] = planePointIndices;
-
-  const planePoint = corners[i1];
-
-  const closest = intersectLineAndPlane(
-    contactPoint,
-    planePoint,
-    outDirection,
-    norm
-  );
-
-  const surfaceCenterPoint = multiplyConst(
-    addVectors(corners[i1], corners[i2], corners[i3], corners[i4]),
-    0.25
-  );
-
-  // corners are returned anticlockwise
-  const surfaceArea =
-    magnitude(subtractVectors(corners[2], corners[1])) *
-    magnitude(subtractVectors(corners[3], corners[2]));
-
-  // deal with corners touching here
-  // deal with lines touching here
-  // const mostAccurateNorm = normaliseVec(subtractVectors())
-
-  return { norm, closest, surfaceCenterPoint, surfaceArea };
-}
-
-export function refineContactPoint(obj1, obj2) {
-  // const obj1OuterNormals = obj1.getOuterPlaneNormals(obj1);
-  // const obj1Corners = obj1.getCuboidCorners(obj1);
-  // const obj1OutDirection = subtractVectors(initContactPoint, obj1.position);
-}
-
-export function getCuboidCuboidCollisionDetails(obj1, obj2, contactPoint) {
-  let {
-    closest: obj1Closest,
-    norm: obj1Norm,
-    surfaceCenterPoint: obj1SurfaceCenterPoint,
-    surfaceArea: obj1SurfaceArea,
-  } = getClosestPointCuboid(obj1, contactPoint);
-  let {
-    closest: obj2Closest,
-    norm: obj2Norm,
-    surfaceCenterPoint: obj2SurfaceCenterPoint,
-    surfaceArea: obj2SurfaceArea,
-  } = getClosestPointCuboid(obj2, contactPoint);
-
-  let newContactPoint;
-  if (dotProduct(obj1Norm, obj2Norm) < -0.8) {
-    // ie the planes are almost parallel
-    // we need to refine the contact point, as otherwise
-    // we introduce moments about the center
-    // Use the center point of the smallest cuboid
-    newContactPoint =
-      obj1SurfaceArea <= obj2SurfaceArea
-        ? obj1SurfaceCenterPoint
-        : obj2SurfaceCenterPoint;
-
-    ({
-      closest: obj1Closest,
-      norm: obj1Norm,
-      surfaceCenterPoint: obj1SurfaceCenterPoint,
-      surfaceArea: obj1SurfaceArea,
-    } = getClosestPointCuboid(obj1, newContactPoint));
-    ({
-      closest: obj2Closest,
-      norm: obj2Norm,
-      surfaceCenterPoint: obj2SurfaceCenterPoint,
-      surfaceArea: obj2SurfaceArea,
-    } = getClosestPointCuboid(obj2, newContactPoint));
+  const contactPoints = getContactManifold(obj1, obj2, normal);
+  if (!contactPoints) {
+    return { collide: false };
   }
+
+  const numContactPoints = contactPoints.length;
+  console.log("NUM CONTACT POINTS", numContactPoints);
+  const avgContactPoint = multiplyConst(
+    addVectors(...contactPoints),
+    1 / numContactPoints
+  );
 
   return {
-    normal:
-      obj1SurfaceArea <= obj2SurfaceArea ? invertVector(obj2Norm) : obj1Norm,
-    obj1Norm, //multiplyConst(addVectors(obj1Norm, invertVector(obj2Norm)), 0.5),
-    obj2Norm,
-    obj1Closest,
-    obj2Closest,
-    contactPoint: newContactPoint || contactPoint,
+    normal,
+    contactPoint: avgContactPoint,
+    overlapDist,
+    collide: true,
+    contactPoints,
   };
 }
+
+// function getClosestPointCuboid(obj, contactPoint) {
+//   const objOuterNormals = obj.getOuterPlaneNormals(obj);
+//   const corners = obj.getCuboidCorners(obj);
+
+//   const outDirection = subtractVectors(contactPoint, obj.position);
+
+//   //sorted planes
+//   const sp = objOuterNormals
+//     .map((norm, planeIndex) => {
+//       const planePointIndices = obj.getCornerIndicesForPlaneIndex(planeIndex);
+//       const intersection = intersectLineAndPlane(
+//         contactPoint,
+//         corners[planePointIndices[0]],
+//         outDirection,
+//         norm
+//       );
+//       const size = squaredDistanceFromOrigin(
+//         subtractVectors(obj.position, intersection)
+//       );
+//       const isSameDirection = sameDirection(outDirection, norm);
+//       return {
+//         size: size,
+//         isSameDirection,
+//         intersection,
+//         planeIndex,
+//         norm: norm,
+//       };
+//     })
+//     .filter((val) => val.isSameDirection)
+//     .toSorted((a, b) => a.size - b.size); // ascending
+
+//   // in these cases its ambiguous which surface to move forwards with
+//   if (isClose(sp[0].size, sp[1].size) && isClose(sp[0].size, sp[2].size)) {
+//     // contactPoint is at a corner
+//   } else if (isClose(sp[0].size, sp[1].size)) {
+//     // contactPoint is on a line
+//   }
+
+//   const norm = normaliseVec(sp[0].norm);
+
+//   const planePointIndices = obj.getCornerIndicesForPlaneIndex(sp[0].planeIndex);
+//   const [i1, i2, i3, i4] = planePointIndices;
+
+//   const planePoint = corners[i1];
+
+//   const closest = intersectLineAndPlane(
+//     contactPoint,
+//     planePoint,
+//     outDirection,
+//     norm
+//   );
+
+//   const surfaceCenterPoint = multiplyConst(
+//     addVectors(corners[i1], corners[i2], corners[i3], corners[i4]),
+//     0.25
+//   );
+
+//   // corners are returned anticlockwise
+//   const surfaceArea =
+//     magnitude(subtractVectors(corners[2], corners[1])) *
+//     magnitude(subtractVectors(corners[3], corners[2]));
+
+//   // deal with corners touching here
+//   // deal with lines touching here
+//   // const mostAccurateNorm = normaliseVec(subtractVectors())
+
+//   return { norm, closest, surfaceCenterPoint, surfaceArea };
+// }
+
+// export function getCuboidCuboidCollisionDetails(obj1, obj2, contactPoint) {
+//   let {
+//     closest: obj1Closest,
+//     norm: obj1Norm,
+//     surfaceCenterPoint: obj1SurfaceCenterPoint,
+//     surfaceArea: obj1SurfaceArea,
+//   } = getClosestPointCuboid(obj1, contactPoint);
+//   let {
+//     closest: obj2Closest,
+//     norm: obj2Norm,
+//     surfaceCenterPoint: obj2SurfaceCenterPoint,
+//     surfaceArea: obj2SurfaceArea,
+//   } = getClosestPointCuboid(obj2, contactPoint);
+
+//   let newContactPoint;
+//   if (dotProduct(obj1Norm, obj2Norm) < -0.8) {
+//     // ie the planes are almost parallel
+//     // we need to refine the contact point, as otherwise
+//     // we introduce moments about the center
+//     // Use the center point of the smallest cuboid
+//     newContactPoint =
+//       obj1SurfaceArea <= obj2SurfaceArea
+//         ? obj1SurfaceCenterPoint
+//         : obj2SurfaceCenterPoint;
+
+//     ({
+//       closest: obj1Closest,
+//       norm: obj1Norm,
+//       surfaceCenterPoint: obj1SurfaceCenterPoint,
+//       surfaceArea: obj1SurfaceArea,
+//     } = getClosestPointCuboid(obj1, newContactPoint));
+//     ({
+//       closest: obj2Closest,
+//       norm: obj2Norm,
+//       surfaceCenterPoint: obj2SurfaceCenterPoint,
+//       surfaceArea: obj2SurfaceArea,
+//     } = getClosestPointCuboid(obj2, newContactPoint));
+//   }
+
+//   return {
+//     normal:
+//       obj1SurfaceArea <= obj2SurfaceArea ? invertVector(obj2Norm) : obj1Norm,
+//     obj1Norm, //multiplyConst(addVectors(obj1Norm, invertVector(obj2Norm)), 0.5),
+//     obj2Norm,
+//     obj1Closest,
+//     obj2Closest,
+//     contactPoint: newContactPoint || contactPoint,
+//   };
+// }
 
 /*
 We make the assumption in this code that collision occurs at a plane
@@ -418,20 +441,19 @@ export function getSphereCuboidCollisionDetails(obj1, obj2) {
 
   const outerNormals = cuboid.getOuterPlaneNormals(cuboid);
 
-  const sortedDotPlanes = Object.entries(outerNormals)
-    .map(([key, norm], index) => {
+  const sortedDotPlanes = outerNormals
+    .map((norm, planeIndex) => {
       return {
         dp: dotProduct(cuboidToSphereDirection, norm),
-        index,
-        planeDirectionStr: key,
+        planeIndex,
         norm: norm,
       };
     })
     .toSorted((a, b) => b.dp - a.dp); // descending
 
   const moreAccurateNorm = normaliseVec(sortedDotPlanes[0].norm);
-  const planePointIndex = cuboid.getCornerIndicesForPlane(
-    sortedDotPlanes[0].planeDirectionStr
+  const planePointIndex = cuboid.getCornerIndicesForPlaneIndex(
+    sortedDotPlanes[0].planeIndex
   )[0];
   const corners = cuboid.getCuboidCorners(cuboid);
   const planePoint = corners[planePointIndex];
@@ -483,11 +505,13 @@ export function gjkIntersection(
 
   let nextDirection = subtractVectors([0, 0, 0], A);
   let containsOrigin = false;
+
+  let contactPoints;
   let contactPoint;
   let obj1Closest;
   let obj2Closest;
   let normal;
-  let obj1Norm, obj2Norm;
+  let overlapDist;
 
   let count = 0;
   while (count < 15) {
@@ -507,6 +531,7 @@ export function gjkIntersection(
       obj2Points
     ));
     if (containsOrigin) {
+      let collide = true;
       if (obj1.shape === "sphere" && obj2.shape === "sphere") {
         ({ normal, obj1Closest, obj2Closest } = getSphereCollisionDetails(
           obj1,
@@ -518,20 +543,17 @@ export function gjkIntersection(
           obj2
         ));
       } else {
-        ({
-          obj1Norm,
-          obj2Norm,
-          obj1Closest,
-          obj2Closest,
-          normal,
-          contactPoint,
-        } = getCuboidCuboidCollisionDetails(obj1, obj2, contactPoint));
+        ({ normal, contactPoint, overlapDist, collide, contactPoints } =
+          getCuboidCuboidCollisionDetails(obj1, obj2, contactPoint));
+        if (!collide) {
+          return { collide };
+        }
       }
       const obj1ContactArm = subtractVectors(contactPoint, obj1.position);
       const obj2ContactArm = subtractVectors(contactPoint, obj2.position);
 
       return {
-        collide: true,
+        collide,
         normal,
         obj1Closest,
         obj2Closest,
@@ -539,14 +561,30 @@ export function gjkIntersection(
         obj2,
         obj1ContactArm,
         obj2ContactArm,
-        obj1Norm,
-        obj2Norm,
+        overlapDist,
+        contactPoint,
+        contactPoints,
       };
     }
 
     count++;
   }
   return { collide: false };
+}
+
+export function getSeparatingDelta(collision) {
+  const { obj1, obj2, obj1Closest, obj2Closest, overlapDist } = collision;
+
+  const d =
+    Math.abs(overlapDist) ||
+    magnitude(subtractVectors(obj1Closest, obj2Closest));
+
+  const totalMass = obj1.mass + obj2.mass;
+  const obj1Frac = obj2.mass / totalMass;
+  const obj2Frac = obj1.mass / totalMass;
+  const d1 = d * obj1Frac;
+  const d2 = d * obj2Frac;
+  return { d1, d2 };
 }
 
 export function resolvePosition(collision) {
@@ -560,9 +598,12 @@ export function resolvePosition(collision) {
 
   Need to take care of m1, m2 labels
   */
-  const { normal, obj1, obj2, obj1Closest, obj2Closest } = collision;
+  const { normal, obj1, obj2, obj1Closest, obj2Closest, overlapDist } =
+    collision;
 
-  const d = magnitude(subtractVectors(obj1Closest, obj2Closest));
+  const d =
+    Math.abs(overlapDist) ||
+    magnitude(subtractVectors(obj1Closest, obj2Closest));
   // if (d > 0.3) {
   //   debugger;
   // }
@@ -678,9 +719,8 @@ export function resolveVelocityWithRotations(collision) {
     crossProduct(normal, subtractVectors(obj1.velocity, obj2.velocity)),
     normal
   );
-  const staticFriction = 0.001;
-  const kineticFriction = 0.5;
-  const frictionComponent = multiplyConst(frictionTangent, staticFriction);
+
+  // const frictionComponent = multiplyConst(frictionTangent, staticFriction);
   // normal = addVectors(normal, frictionComponent); // this is a hack but avoids a rewrite
 
   const massD = 1 / obj1.mass + 1 / obj2.mass;
@@ -704,24 +744,55 @@ export function resolveVelocityWithRotations(collision) {
       dotProduct(subtractVectors(obj1.velocity, obj2.velocity), normal)
   );
 
-  const withFriction = addVectors(normal, frictionComponent);
+  // const withFriction = normal;
+
+  const staticFriction = 0.05;
+  const rotationFriction = 0.001;
+
+  obj1.frictionComponent = invertVector(frictionTangent);
+  obj2.frictionComponent = frictionTangent;
+  const withFriction = addVectors(
+    normal,
+    multiplyConst(frictionTangent, staticFriction)
+  );
+
+  const withRotationFriction = addVectors(
+    normal,
+    multiplyConst(invertVector(frictionTangent), rotationFriction)
+  );
 
   let v1_diff = [0, 0, 0];
   let v2_diff = [0, 0, 0];
   let w1_diff = [0, 0, 0];
   let w2_diff = [0, 0, 0];
+  // if (impulse < 1.0) {
+  // const beta = 0.7;
+  // const { d1, d2 } = getSeparatingDelta(collision);
+  // v1_diff = subtractVectors(
+  //   v1_diff,
+  //   multiplyConst(normal, (d1 * beta) / TIME_STEP)
+  // );
+  // v2_diff = subtractVectors(
+  //   v2_diff,
+  //   multiplyConst(normal, (d2 * beta) / TIME_STEP)
+  // );
+  // }
+
+  // v1_diff = addVectors(v1_diff, frictionComponent);
+  // v2_diff = addVectors(v2_diff, frictionComponent);
+
   if (!obj1.fixed) {
-    v1_diff = multiplyConst(withFriction, impulse / obj2.mass);
+    v1_diff = multiplyConst(withFriction, impulse / obj1.mass);
     w1_diff = multiplyMatrixVec(
       obj1.getInverseInertia(obj1),
-      crossProduct(obj1ContactArm, multiplyConst(withFriction, impulse))
+      crossProduct(obj1ContactArm, multiplyConst(withRotationFriction, impulse))
     );
   }
   if (!obj2.fixed) {
     v2_diff = multiplyConst(withFriction, impulse / obj2.mass);
     w2_diff = multiplyMatrixVec(
       obj2.getInverseInertia(obj2),
-      crossProduct(obj2ContactArm, multiplyConst(withFriction, impulse))
+      crossProduct(obj2ContactArm, multiplyConst(withRotationFriction, impulse))
     );
   }
 

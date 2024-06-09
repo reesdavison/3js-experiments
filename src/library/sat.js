@@ -115,9 +115,9 @@ export function sat(obj1, obj2) {
     }
   }
 
-  // if (smallestObjIndex === 1) {
-  //   // we return the direction vector relative to obj1 outer
-  // }
+  // TODO: https://media.steampowered.com/apps/valve/2015/DirkGregorius_Contacts.pdf
+  // We need to test the cross product between all edge combinations of A and B
+
   if (!sameDirection(smallest, subtractVectors(obj2.position, obj1.position))) {
     smallest = invertVector(smallest);
   }

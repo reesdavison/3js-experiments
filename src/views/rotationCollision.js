@@ -70,21 +70,21 @@ const leftPlane = createTHREEBox(
 
 const boxLen = 0.75;
 
-// const movableBox1 = createTHREEBox(
-//   scene,
-//   0x446df6,
-//   boxLen,
-//   boxLen,
-//   boxLen,
-//   [-1, 1.5, 0],
-//   [2, 0, 0],
-//   [0, 1, 0],
-//   Math.PI / 2,
-//   objectMass,
-//   false,
-//   1,
-//   [0, 1, 0]
-// );
+const movableBox1 = createTHREEBox(
+  scene,
+  0x446df6,
+  boxLen,
+  boxLen,
+  boxLen,
+  [-1, 1.5, 0],
+  [2, 0, 0],
+  [0, 1, 0],
+  0,
+  objectMass,
+  false,
+  1,
+  [0, 0, 1]
+);
 
 // const movableBox2 = createTHREEBox(
 //   scene,
@@ -118,21 +118,21 @@ const boxLen = 0.75;
 //   [0.5, 0, 0.5]
 // );
 
-const movableBox4 = createTHREEBox(
-  scene,
-  0x446df6,
-  boxLen,
-  boxLen,
-  boxLen,
-  [2, boxLen / 2, -3],
-  [0, 0, 0],
-  [0, 1, 0],
-  0,
-  objectMass,
-  false,
-  0,
-  [0.5, 0, 0.5]
-);
+// const movableBox4 = createTHREEBox(
+//   scene,
+//   0x446df6,
+//   boxLen,
+//   boxLen,
+//   boxLen,
+//   [2, boxLen / 2, -3],
+//   [0, 0, 0],
+//   [0, 1, 0],
+//   0,
+//   objectMass,
+//   false,
+//   0,
+//   [0.5, 0, 0.5]
+// );
 
 // const cuboid1 = createTHREEBox(
 //   scene,
@@ -154,18 +154,26 @@ let time = 0;
 const allObjects = [
   // cuboid1,
   // cuboid2,
-  // movableBox1,
+  movableBox1,
   // movableBox2,
   // movableBox3,
-  movableBox4,
+  // movableBox4,
   bottomPlane,
   leftPlane,
 ];
 
 const movableObjects = allObjects.filter((obj) => !obj.fixed);
 
+allObjects.forEach((obj) => {
+  obj.arrowHelper = createArrow([0, 0, 0], [0, 0, 0], scene);
+});
+
 const arrowObj1 = createArrow([0, 0, 0], [0, 0, 0], scene);
-const arrowObj2 = createArrow([0, 0, 0], [0, 0, 0], scene);
+const cArrow1 = createArrow([0, 0, 0], [0, 0, 0], scene);
+const cArrow2 = createArrow([0, 0, 0], [0, 0, 0], scene);
+const cArrow3 = createArrow([0, 0, 0], [0, 0, 0], scene);
+const cArrow4 = createArrow([0, 0, 0], [0, 0, 0], scene);
+const cArrows = [cArrow1, cArrow2, cArrow3, cArrow4];
 
 function resolveAllCollisionsOctree() {
   const frameOctree = new OctreeNode(
@@ -182,8 +190,26 @@ function resolveAllCollisionsOctree() {
     console.log("collision");
     resolveCollision(collisions[i]);
     const col = collisions[i];
-    updateArrow(arrowObj1, col.normal, col.obj1Closest);
-    updateArrow(arrowObj2, invertVector(col.normal), col.obj2Closest);
+    if (!col.obj1.fixed) {
+      updateArrow(
+        col.obj1.arrowHelper,
+        col.obj1.frictionComponent,
+        col.contactPoint
+      );
+      col.contactPoints.forEach((cp, index) => {
+        updateArrow(cArrows[index], col.normal, cp);
+      });
+    }
+    if (!col.obj2.fixed) {
+      updateArrow(
+        col.obj2.arrowHelper,
+        col.obj2.frictionComponent,
+        col.contactPoint
+      );
+      col.contactPoints.forEach((cp, index) => {
+        updateArrow(cArrows[index], col.normal, cp);
+      });
+    }
   }
   // console.log("Num checks ", numChecks);
 }

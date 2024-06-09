@@ -49,18 +49,14 @@ export function getCornerIndicesForPlaneIndex(planeIndex) {
   return planeIndices[planeIndex];
 }
 
-export function getInverseInertiaMatrix(
-  width = 1,
-  height = 1,
-  depth = 1,
-  mass = 1
-) {
+function getInverseInertiaMatrix(width = 1, height = 1, depth = 1, mass = 1) {
   const C = mass / 12;
   const inertiaMatrix = [
     [C * height ** 2 + depth ** 2, 0, 0],
     [0, C * width ** 2 + depth ** 2, 0],
     [0, 0, C * width ** 2 + height ** 2],
   ];
+
   return invertMatrix(inertiaMatrix);
 }
 
@@ -280,6 +276,7 @@ export function createBox(
     getCornerIndicesForPlane,
     getOuterPlaneNormals,
     getConnectedVerticesIndex,
+    getCornerIndicesForPlaneIndex,
     getRotation,
     centerForce: [0, 0, 0],
   };
