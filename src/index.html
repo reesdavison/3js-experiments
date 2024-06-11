@@ -1,22 +1,140 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>My first three.js app</title>
-    <style>
-      body { margin: 0; }
-    </style>
-  </head>
-  <body>
-    Physics engine simulations
-    <ul>
-      <li><a href="./views/threeBodyGravity.html">Three body gravity</a> - a demonstration of the gravity equation.</li>
-      <li><a href="./views/bouncingBall.html">Bouncing ball</a> - simulate a ball falling on earth.</li>
-      <li><a href="./views/ballCollisions.html">Ball collisions</a> - a basic 2 sphere collision.</li>
-      <li><a href="./views/multiBall.html">Multi ball</a> - collisions between movable spheres and immovable walls.</li>
-      <li><a href="./views/multiBall2.html">Multi ball 2</a> - using an octree to handle many game objects. Very measurable performance difference as heavily reduced the number of expensive collision checks.</li>
-      <li><a href="./views/rotationCollision.html">Rotation in collisions</a> - up to now collisions have looked ok since we've only been using spheres. Cube collisions require rotations to look realistic.</li>
-      <li>TODO a hinge - implement a basic constraint</li>
-    </ul>
-  </body>
+<!DOCTYPE HTML>
+<!--
+	Phantom by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>Physics simulations for JS</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+		<link rel="apple-touch-icon" sizes="180x180" href="/images/favicon_io/apple-touch-icon.png">
+		<link rel="icon" type="image/png" sizes="32x32" href="/images/favicon_io/favicon-32x32.png">
+		<link rel="icon" type="image/png" sizes="16x16" href="/images/favicon_io/favicon-16x16.png">
+		<link rel="manifest" href="/site.webmanifest">
+	</head>
+	<body class="is-preload">
+		<!-- Wrapper -->
+			<div id="wrapper">
+
+				<!-- Header -->
+					<header id="header">
+						<div class="inner">
+
+							<!-- Logo -->
+								<a href="https://github.com/reesdavison/3js-experiments" class="logo">
+									<span class="symbol"><img src="/images/favicon_io/android-chrome-512x512.png" alt="" /></span><span class="title">reesdavison</span>
+								</a>
+
+						</div>
+					</header>
+
+				<!-- Main -->
+					<div id="main">
+						<div class="inner">
+							<header>
+								<h1>Physics simulations for JS<br />
+								</h1>
+								<p>A hobby project building some physics simulations with JS.</p>
+							</header>
+							<section class="tiles">
+								<article class="style1">
+									<span class="image">
+										<img src="images/cube1.png" alt="" />
+									</span>
+									<a href="./views/rotationCollision.html">
+										<h2>Simple cube rotation</h2>
+										<div class="content">
+											<p> Cube collisions require rotations to look realistic. For this we implement the SAT algorithm, clipping to find contact manifolds and upgrade the physics to allow for rotations.</p>
+										</div>
+									</a>
+								</article>
+								<article class="style2">
+									<span class="image">
+										<img src="images/ballOctree.png" alt="" />
+									</span>
+									<a href="./views/multiBall2.html">
+										<h2>Multiball</h2>
+										<div class="content">
+											<p>Using an octree to handle many game objects. The simulation gains a very measurable performance difference by heavily reducing the number of expensive collision checks.</p>
+										</div>
+									</a>
+								</article>
+								<article class="style3">
+									<span class="image">
+										<img src="images/ballCollisions.png" alt="" />
+									</span>
+									<a href="./views/multiBall.html">
+										<h2>Ball collisions</h2>
+										<div class="content">
+											<p>Collisions between movable spheres and immovable walls.</p>
+										</div>
+									</a>
+								</article>
+								<article class="style4">
+									<span class="image">
+										<img src="images/ball1.png" alt="" />
+									</span>
+									<a href="./views/ballCollisions.html">
+										<h2>Collision detection</h2>
+										<div class="content">
+											<p>Collision detection, calculating impulses and updating the simulation.</p>
+										</div>
+									</a>
+								</article>
+								<article class="style5">
+									<span class="image">
+										<img src="images/threeBodyGravity.png" alt="" />
+									</span>
+									<a href="./views/threeBodyGravity.html">
+										<h2>Simulating gravity in space</h2>
+										<div class="content">
+											<p>Demonstration of forces on objects, and using the semi-implicit euler method to update the simulation.</p>
+										</div>
+									</a>
+								</article>
+								<article class="style6">
+									<span class="image">
+										<img src="images/threeBodyGravity.png" alt="" />
+									</span>
+									<a href="#">
+										<h2>Coming soon - hinge constraint</h2>
+										<div class="content">
+											<p>Implement a basic constraint.</p>
+										</div>
+									</a>
+								</article>
+							</section>
+						</div>
+					</div>
+
+				<!-- Footer -->
+					<footer id="footer">
+						<div class="inner">
+							<section>
+								<h2>Follow</h2>
+								<ul class="icons">
+									<li><a href="https://github.com/reesdavison" class="icon brands style2 fa-github"><span class="label">GitHub</span></a></li>
+									<li><a href="https://www.linkedin.com/in/reesdavison/" class="icon brands style2 fa-linkedin"><span class="label">Linkedin</span></a></li>
+								</ul>
+							</section>
+							<ul class="copyright">
+								<li>&copy; Rees Davison. All rights reserved</li><li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
+							</ul>
+						</div>
+					</footer>
+
+			</div>
+
+		<!-- Scripts -->
+			<script type="module" src="assets/js/jquery.min.js"></script>
+			<script type="module" src="assets/js/browser.min.js"></script>
+			<script type="module" src="assets/js/breakpoints.min.js"></script>
+			<script type="module" src="assets/js/util.js"></script>
+			<script type="module" src="assets/js/main.js"></script>
+
+	</body>
 </html>
