@@ -1,7 +1,7 @@
 {
   "scripts": {
     "dev": "vite",
-    "build": "vite build  --emptyOutDir",
+    "build": "vite build  --emptyOutDir && cp -r src/assets/js dist/assets",
     "preview": "vite preview",
     "test": "vitest"
   },
