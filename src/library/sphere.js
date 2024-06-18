@@ -103,8 +103,8 @@ export function createSphere(
   function getDampeningParameters() {
     const energyHighThresh = 10;
     const energyLowThresh = 0.07;
-    const energyZeroThresh = 0.02;
-    const highDampener = 0.99;
+    const energyZeroThresh = 0.001;
+    const highDampener = 0.999;
     const lowDampener = 0.9;
 
     return {

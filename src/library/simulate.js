@@ -22,17 +22,17 @@ export function eulerStep(obj) {
   const dp = obj.getDampeningParameters();
   const energy = obj.getNormalisedMassKineticEnergy(obj);
 
-  // if (obj.getNormalisedMassKineticEnergy) {
-  //   // console.log("Energy ", energy);
+  if (obj.getNormalisedMassKineticEnergy) {
+    // console.log("Energy ", energy);
 
-  //   if (energy < dp.energyZeroThresh) {
-  //     vel = [0.0, 0.0, 0.0];
-  //   } else if (energy < dp.energyLowThresh) {
-  //     vel = multiplyConst(vel, dp.lowDampener);
-  //   } else if (energy < dp.energyHighThresh) {
-  //     vel = multiplyConst(vel, dp.highDampener);
-  //   }
-  // }
+    if (energy < dp.energyZeroThresh) {
+      vel = [0.0, 0.0, 0.0];
+    } else if (energy < dp.energyLowThresh) {
+      vel = multiplyConst(vel, dp.lowDampener);
+    } else if (energy < dp.energyHighThresh) {
+      vel = multiplyConst(vel, dp.highDampener);
+    }
+  }
 
   const pos = addVectors(obj.position, multiplyConst(vel, TIME_STEP));
 
@@ -40,21 +40,21 @@ export function eulerStep(obj) {
   obj.velocity = vel;
 
   if (obj.angularRotation && obj.angularVelocity) {
-    //   if (energy) {
-    //     if (energy < dp.energyZeroThresh) {
-    //       obj.angularVelocity = [0, 0, 0];
-    //     } else if (energy < dp.energyLowThresh) {
-    //       obj.angularVelocity = multiplyConst(
-    //         obj.angularVelocity,
-    //         dp.lowDampener
-    //       );
-    //     } else if (energy < dp.energyHighThresh) {
-    //       obj.angularVelocity = multiplyConst(
-    //         obj.angularVelocity,
-    //         dp.highDampener
-    //       );
-    //     }
-    //   }
+    if (energy) {
+      if (energy < dp.energyZeroThresh) {
+        obj.angularVelocity = [0, 0, 0];
+      } else if (energy < dp.energyLowThresh) {
+        obj.angularVelocity = multiplyConst(
+          obj.angularVelocity,
+          dp.lowDampener
+        );
+      } else if (energy < dp.energyHighThresh) {
+        obj.angularVelocity = multiplyConst(
+          obj.angularVelocity,
+          dp.highDampener
+        );
+      }
+    }
 
     const newAngularRotation = addVectors(
       obj.angularRotation,

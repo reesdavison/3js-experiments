@@ -295,10 +295,10 @@ export function createBox(
   }
 
   function getDampeningParameters() {
-    const energyHighThresh = 0.3;
-    const energyLowThresh = 0.07;
-    const energyZeroThresh = 0.02;
-    const highDampener = 0.99;
+    const energyHighThresh = 50;
+    const energyLowThresh = 1;
+    const energyZeroThresh = 0.01;
+    const highDampener = 0.999;
     const lowDampener = 0.9;
 
     return {

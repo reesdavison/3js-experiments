@@ -577,7 +577,7 @@ export function resolveVelocityWithRotations(collision) {
   // console.log("V diff mag", v_diff_mag);
 
   const staticFriction = 0.2;
-  const kineticFriction = 0.2;
+  const kineticFriction = 0.1;
 
   let frictionTangent = normaliseVec(
     crossProduct(
