@@ -12,6 +12,8 @@ import {
   sameDirection,
   crossProduct,
   normaliseVec,
+  magnitude,
+  multiplyConst,
 } from "./vector";
 
 function project(obj, axis) {
@@ -77,7 +79,11 @@ export function sat(obj1, obj2) {
   }
   for (let i = 1; i < obj1Edges.length; i++) {
     for (let j = 0; j < i; j++) {
-      edgeAxes.push(normaliseVec(crossProduct(obj1Edges[i], obj2Edges[j])));
+      const newAxis = crossProduct(obj1Edges[i], obj2Edges[j]);
+      const mag = magnitude(newAxis);
+      if (mag > 0.001) {
+        edgeAxes.push(multiplyConst(newAxis, 1 / mag));
+      }
     }
   }
   const allAxes = [...obj1Axes, ...obj2Axes, ...edgeAxes];
