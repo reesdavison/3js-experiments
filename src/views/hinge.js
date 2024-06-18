@@ -156,11 +156,11 @@ function resolveAllCollisions() {
               col.obj1.frictionComponent,
               col.contactPoint
             );
-            // updateArrow(
-            //   col.obj1.arrowHelper1,
-            //   col.obj1.angularVelocity,
-            //   col.obj1.position
-            // );
+            updateArrow(
+              col.obj1.arrowHelper1,
+              col.obj1.angularVelocity,
+              col.obj1.position
+            );
             // updateArrow(
             //   col.obj1.arrowHelper1,
             //   col.obj1.withFriction,
@@ -181,11 +181,11 @@ function resolveAllCollisions() {
               col.obj2.frictionComponent,
               col.contactPoint
             );
-            // updateArrow(
-            //   col.obj2.arrowHelper1,
-            //   col.obj2.angularVelocity,
-            //   col.obj2.position
-            // );
+            updateArrow(
+              col.obj2.arrowHelper1,
+              col.obj2.angularVelocity,
+              col.obj2.position
+            );
             // updateArrow(
             //   col.obj2.arrowHelper1,
             //   col.obj2.withFriction,

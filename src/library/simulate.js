@@ -17,19 +17,22 @@ export function eulerStep(obj) {
   const acc = multiplyConst(totalForceAboutCenter, 1 / obj.mass);
   let vel = addVectors(obj.velocity, multiplyConst(acc, TIME_STEP));
 
-  let energy;
-  const MIN_ENERGY_HIGH = 0.3;
-  const MIN_ENERGY_LOW = 0.1;
+  // let energy;
 
-  if (obj.getNormalisedMassKineticEnergy) {
-    energy = obj.getNormalisedMassKineticEnergy(obj);
-    if (energy < MIN_ENERGY_HIGH) {
-      vel = multiplyConst(vel, 0.9);
-    }
-    if (energy < MIN_ENERGY_LOW) {
-      vel = [0, 0, 0];
-    }
-  }
+  const dp = obj.getDampeningParameters();
+  const energy = obj.getNormalisedMassKineticEnergy(obj);
+
+  // if (obj.getNormalisedMassKineticEnergy) {
+  //   // console.log("Energy ", energy);
+
+  //   if (energy < dp.energyZeroThresh) {
+  //     vel = [0.0, 0.0, 0.0];
+  //   } else if (energy < dp.energyLowThresh) {
+  //     vel = multiplyConst(vel, dp.lowDampener);
+  //   } else if (energy < dp.energyHighThresh) {
+  //     vel = multiplyConst(vel, dp.highDampener);
+  //   }
+  // }
 
   const pos = addVectors(obj.position, multiplyConst(vel, TIME_STEP));
 
@@ -37,12 +40,21 @@ export function eulerStep(obj) {
   obj.velocity = vel;
 
   if (obj.angularRotation && obj.angularVelocity) {
-    if (energy && energy < MIN_ENERGY_HIGH) {
-      obj.angularVelocity = multiplyConst(obj.angularVelocity, 0.9);
-    }
-    if (energy && energy < MIN_ENERGY_LOW) {
-      obj.angularVelocity = [0, 0, 0];
-    }
+    //   if (energy) {
+    //     if (energy < dp.energyZeroThresh) {
+    //       obj.angularVelocity = [0, 0, 0];
+    //     } else if (energy < dp.energyLowThresh) {
+    //       obj.angularVelocity = multiplyConst(
+    //         obj.angularVelocity,
+    //         dp.lowDampener
+    //       );
+    //     } else if (energy < dp.energyHighThresh) {
+    //       obj.angularVelocity = multiplyConst(
+    //         obj.angularVelocity,
+    //         dp.highDampener
+    //       );
+    //     }
+    //   }
 
     const newAngularRotation = addVectors(
       obj.angularRotation,

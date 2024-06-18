@@ -554,18 +554,52 @@ export function resolveVelocityWithRotations(collision) {
   https://arc.net/l/quote/mudyryjs
   A big thanks to Amir Vaxman - https://avaxman.github.io/
   for the great lecture notes.
+
+  Used https://code.tutsplus.com/how-to-create-a-custom-2d-physics-engine-friction-scene-and-jump-table--gamedev-7756t
+  for applying Coulombs law for scaling friction
   */
   let { normal, obj1, obj2, obj1ContactArm, obj2ContactArm } = collision;
 
-  const frictionTangent = crossProduct(
-    crossProduct(normal, subtractVectors(obj1.velocity, obj2.velocity)),
-    normal
+  const massD = 1 / obj1.mass + 1 / obj2.mass;
+
+  const obj1ContactVelocity = addVectors(
+    obj1.velocity,
+    crossProduct(obj1.angularVelocity, obj1ContactArm)
+  );
+  const obj2ContactVelocity = addVectors(
+    obj2.velocity,
+    crossProduct(obj2.angularVelocity, obj2ContactArm)
   );
 
-  // const frictionComponent = multiplyConst(frictionTangent, staticFriction);
-  // normal = addVectors(normal, frictionComponent); // this is a hack but avoids a rewrite
+  // const v_diff_mag = magnitude(
+  //   subtractVectors(obj1ContactVelocity, obj2ContactVelocity)
+  // );
+  // console.log("V diff mag", v_diff_mag);
 
-  const massD = 1 / obj1.mass + 1 / obj2.mass;
+  const staticFriction = 0.2;
+  const kineticFriction = 0.2;
+
+  let frictionTangent = normaliseVec(
+    crossProduct(
+      crossProduct(
+        normal,
+        subtractVectors(obj2ContactVelocity, obj1ContactVelocity)
+      ),
+      normal
+    )
+  );
+  if (frictionTangent[0] !== frictionTangent[0]) {
+    // normalise caused nans due to no velocity
+    frictionTangent = [0, 0, 0];
+  }
+
+  const friction1 =
+    dotProduct(subtractVectors(obj2.velocity, obj1.velocity), frictionTangent) /
+    massD;
+  const friction2 = -friction1;
+  obj1.frictionComponent = multiplyConst(frictionTangent, friction1);
+  obj2.frictionComponent = multiplyConst(frictionTangent, friction2);
+
   const crossArmNormal1 = crossProduct(obj1ContactArm, normal);
   const inertiaTerm1 = multiplyVecMatrixVec(
     crossArmNormal1,
@@ -580,61 +614,68 @@ export function resolveVelocityWithRotations(collision) {
   );
   const denominator = massD + inertiaTerm1 + inertiaTerm2;
 
-  const Cr = 0.7; // (for now)
+  const Cr = 0.9; // (for now)
   const impulse = -Math.abs(
     -((Cr + 1) / denominator) *
       dotProduct(subtractVectors(obj1.velocity, obj2.velocity), normal)
-  );
-
-  // const withFriction = normal;
-
-  const staticFriction = 0.05;
-  const rotationFriction = 0.001;
-
-  obj1.frictionComponent = invertVector(frictionTangent);
-  obj2.frictionComponent = frictionTangent;
-  const withFriction = addVectors(
-    normal,
-    multiplyConst(frictionTangent, staticFriction)
-  );
-
-  const withRotationFriction = addVectors(
-    normal,
-    multiplyConst(invertVector(frictionTangent), rotationFriction)
   );
 
   let v1_diff = [0, 0, 0];
   let v2_diff = [0, 0, 0];
   let w1_diff = [0, 0, 0];
   let w2_diff = [0, 0, 0];
-  // if (impulse < 1.0) {
-  // const beta = 0.7;
-  // const { d1, d2 } = getSeparatingDelta(collision);
-  // v1_diff = subtractVectors(
-  //   v1_diff,
-  //   multiplyConst(normal, (d1 * beta) / TIME_STEP)
-  // );
-  // v2_diff = subtractVectors(
-  //   v2_diff,
-  //   multiplyConst(normal, (d2 * beta) / TIME_STEP)
-  // );
-  // }
-
-  // v1_diff = addVectors(v1_diff, frictionComponent);
-  // v2_diff = addVectors(v2_diff, frictionComponent);
 
   if (!obj1.fixed) {
-    v1_diff = multiplyConst(withFriction, impulse / obj1.mass);
+    if (Math.abs(friction1) > Math.abs(impulse * kineticFriction)) {
+      // perform clamping
+      obj1.frictionComponent = multiplyConst(
+        frictionTangent,
+        -impulse * kineticFriction
+      );
+    }
+
+    v1_diff = multiplyConst(normal, impulse / obj1.mass);
     w1_diff = multiplyMatrixVec(
       obj1.getInverseInertia(obj1),
-      crossProduct(obj1ContactArm, multiplyConst(withRotationFriction, impulse))
+      crossProduct(obj1ContactArm, multiplyConst(normal, impulse))
+    );
+
+    v1_diff = addVectors(
+      v1_diff,
+      multiplyConst(obj1.frictionComponent, 1 / obj1.mass)
+    );
+    w1_diff = addVectors(
+      w1_diff,
+      multiplyMatrixVec(
+        obj1.getInverseInertia(obj1),
+        crossProduct(obj1ContactArm, obj1.frictionComponent)
+      )
     );
   }
   if (!obj2.fixed) {
-    v2_diff = multiplyConst(withFriction, impulse / obj2.mass);
+    if (Math.abs(friction2) > Math.abs(impulse * kineticFriction)) {
+      obj2.frictionComponent = multiplyConst(
+        frictionTangent,
+        -impulse * kineticFriction
+      );
+    }
+
+    v2_diff = multiplyConst(normal, impulse / obj2.mass);
     w2_diff = multiplyMatrixVec(
       obj2.getInverseInertia(obj2),
-      crossProduct(obj2ContactArm, multiplyConst(withRotationFriction, impulse))
+      crossProduct(obj2ContactArm, multiplyConst(normal, impulse))
+    );
+
+    v2_diff = addVectors(
+      v2_diff,
+      multiplyConst(obj2.frictionComponent, 1 / obj2.mass)
+    );
+    w2_diff = addVectors(
+      w2_diff,
+      multiplyMatrixVec(
+        obj2.getInverseInertia(obj2),
+        crossProduct(obj2ContactArm, obj2.frictionComponent)
+      )
     );
   }
 
@@ -668,7 +709,7 @@ export function resolveCollision(collision) {
     if (obj1.shape === "box" && obj2.shape === "box") {
       resolveVelocityWithRotations(collision);
     } else {
-      resolveVelocity(collision);
+      resolveVelocityWithRotations(collision);
     }
   }
 }

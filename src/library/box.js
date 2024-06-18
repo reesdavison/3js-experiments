@@ -51,6 +51,30 @@ export function getCornerIndicesForPlaneIndex(planeIndex) {
   return planeIndices[planeIndex];
 }
 
+export function getEdgeVectors(obj) {
+  const edgeIndices = [
+    [1, 0], //1
+    [0, 3], //2
+    [3, 6], //3
+    [6, 7], //4
+    [7, 4], //5
+    [4, 1], //6
+    [5, 7], //7
+    [3, 5], //8
+    [4, 2], //9
+    [2, 0], //10
+    [1, 6], //11
+    [2, 5], //12
+  ];
+  const corners = obj.getCuboidCorners(obj);
+  const edges = edgeIndices.map((edgeIndexes) => {
+    const vec1 = corners[edgeIndexes[0]];
+    const vec2 = corners[edgeIndexes[1]];
+    return subtractVectors(vec1, vec2);
+  });
+  return edges;
+}
+
 function getInertiaMatrix(width = 1, height = 1, depth = 1, mass = 1) {
   const C = mass / 12;
   const inertiaMatrix = [
@@ -108,7 +132,7 @@ export function createBox(
   initPosRotationRadians = 0,
   mass = 1,
   fixed = false,
-  angularVelocity = 1,
+  angularVelocity = 0,
   rotationAxis = normaliseVec([1, 1, 1])
 ) {
   const size = Math.max(width, height, depth);
@@ -270,6 +294,22 @@ export function createBox(
     return rotationalE + translationalE;
   }
 
+  function getDampeningParameters() {
+    const energyHighThresh = 0.3;
+    const energyLowThresh = 0.07;
+    const energyZeroThresh = 0.02;
+    const highDampener = 0.99;
+    const lowDampener = 0.9;
+
+    return {
+      energyHighThresh,
+      energyLowThresh,
+      energyZeroThresh,
+      highDampener,
+      lowDampener,
+    };
+  }
+
   return {
     shape: "box",
     width,
@@ -292,6 +332,8 @@ export function createBox(
     getNormalisedMassKineticEnergy,
     getRotation,
     centerForce: [0, 0, 0],
+    getDampeningParameters,
+    getEdgeVectors,
   };
 }
 

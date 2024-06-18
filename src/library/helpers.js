@@ -32,7 +32,7 @@ export function createArrow(newDir, newOrigin, scene) {
   dir.normalize();
   const origin = new THREE.Vector3(...newOrigin);
   const length = 2;
-  const hex = 0x00635d;
+  const hex = 0xdc143c;
   const arrowHelper = new THREE.ArrowHelper(dir, origin, length, hex);
   scene.add(arrowHelper);
   return arrowHelper;

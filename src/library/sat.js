@@ -10,6 +10,8 @@ import {
   invertVector,
   subtractVectors,
   sameDirection,
+  crossProduct,
+  normaliseVec,
 } from "./vector";
 
 function project(obj, axis) {
@@ -66,34 +68,25 @@ export function sat(obj1, obj2) {
   const obj1Axes = obj1.getOuterPlaneNormals(obj1);
   const obj2Axes = obj2.getOuterPlaneNormals(obj2);
 
-  let smallestObjIndex;
+  const obj1Edges = obj1.getEdgeVectors(obj1);
+  const obj2Edges = obj2.getEdgeVectors(obj2);
 
-  // loop over the axes1
-  for (let i = 0; i < obj1Axes.length; i++) {
-    let axis = obj1Axes[i];
-    // project both shapes onto the axis
-    const p1 = project(obj1, axis);
-    const p2 = project(obj2, axis);
-
-    // do the projections overlap?
-    if (!projectionsOverlap(p1, p2)) {
-      // then we can guarantee that the shapes do not overlap
-      return { hasOverlap: false };
-    } else {
-      // get the overlap
-      const o = getOverlap(p1, p2);
-      // check for minimum
-      if (o < overlap) {
-        // then set this one as the smallest
-        overlap = o;
-        smallest = axis;
-        smallestObjIndex = 0;
-      }
+  const edgeAxes = [];
+  if (obj1Edges.length !== obj2Edges.length) {
+    throw new Error("current expectation of the code");
+  }
+  for (let i = 1; i < obj1Edges.length; i++) {
+    for (let j = 0; j < i; j++) {
+      edgeAxes.push(normaliseVec(crossProduct(obj1Edges[i], obj2Edges[j])));
     }
   }
-  // loop over the axes2
-  for (let i = 0; i < obj2Axes.length; i++) {
-    let axis = obj2Axes[i];
+  const allAxes = [...obj1Axes, ...obj2Axes, ...edgeAxes];
+
+  // let smallestObjIndex;
+
+  // loop over the axes1
+  for (let i = 0; i < allAxes.length; i++) {
+    let axis = allAxes[i];
     // project both shapes onto the axis
     const p1 = project(obj1, axis);
     const p2 = project(obj2, axis);
@@ -110,7 +103,7 @@ export function sat(obj1, obj2) {
         // then set this one as the smallest
         overlap = o;
         smallest = axis;
-        smallestObjIndex = 1;
+        // smallestObjIndex = 0;
       }
     }
   }
@@ -129,7 +122,6 @@ export function sat(obj1, obj2) {
     direction: smallest,
     overlapDist: overlap,
     hasOverlap: true,
-    smallestObjIndex,
   };
   return mtv;
 }
